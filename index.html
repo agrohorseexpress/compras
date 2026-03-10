@@ -308,7 +308,6 @@ tr:hover td{background:var(--navy-700);}
         <button class="active" onclick="showView('dashboard',this)">Inicio</button>
         <button onclick="showView('nueva',this)">+ Nueva</button>
         <button onclick="showView('historial',this)" id="nav-historial">Historial</button>
-        <button onclick="showView('suplidores',this)">Suplidores</button>
         <button onclick="showView('resumen',this)">Resumen</button>
       </nav>
       <button class="logout-btn" onclick="doLogout()">Salir</button>
@@ -395,43 +394,49 @@ tr:hover td{background:var(--navy-700);}
       </div>
     </div>
 
-    <!-- HISTORIAL -->
+    <!-- HISTORIAL + SUPLIDORES -->
     <div id="view-historial" class="view">
-      <div class="historial-top">
-        <div><h1 style="font-family:'Playfair Display',serif;font-size:24px;font-weight:600;color:var(--white)">Historial</h1><p style="color:var(--text-muted);font-size:13px;margin-top:3px;font-weight:300">Consulta y actualiza todas las órdenes.</p></div>
-        <div class="filters">
-          <select id="filtro-mes" onchange="renderHistorial()"><option value="">Todos los meses</option></select>
-          <select id="filtro-tipo" onchange="renderHistorial()"><option value="">Negocio + Clientes</option><option value="negocio">Solo Negocio</option><option value="cliente">Solo Clientes</option></select>
-          <select id="filtro-cat" onchange="renderHistorial()"><option value="">Todas las categorías</option></select>
-          <select id="filtro-estado" onchange="renderHistorial()"><option value="">Todos los estados</option><option>Pendiente</option><option>Ordenado</option><option>Recibido</option></select>
-          <input type="text" id="filtro-buscar" placeholder="🔍 Buscar..." oninput="renderHistorial()">
-        </div>
+      <!-- Sub-tabs -->
+      <div style="display:flex;margin-bottom:20px;border-bottom:1px solid var(--border);">
+        <button id="htab-ordenes" onclick="switchHistorialTab('ordenes')" style="background:none;border:none;border-bottom:2px solid var(--gold);color:var(--gold);padding:10px 18px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;margin-bottom:-1px;">Órdenes</button>
+        <button id="htab-suplidores" onclick="switchHistorialTab('suplidores')" style="background:none;border:none;border-bottom:2px solid transparent;color:var(--text-muted);padding:10px 18px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:500;letter-spacing:1px;text-transform:uppercase;cursor:pointer;margin-bottom:-1px;transition:all 0.15s;">Suplidores</button>
       </div>
-      <div class="stats-row" id="stats-row"></div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Orden</th><th>Descripción</th><th>Tipo</th><th>Categoría</th><th>Costo</th><th>Tracking</th><th>Estado</th><th></th></tr></thead>
-          <tbody id="tabla-body"></tbody>
-        </table>
-        <div id="empty-state" class="empty-state" style="display:none"><div class="icon">📋</div><p>No hay órdenes registradas.</p></div>
-      </div>
-    </div>
 
-    <!-- SUPLIDORES -->
-    <div id="view-suplidores" class="view">
-      <div class="page-header">
-        <div><h1>Suplidores</h1><p>Gastos totales agrupados por suplidor.</p></div>
-        <div style="display:flex;gap:8px;align-items:center">
-          <select id="sup-filtro-mes" onchange="renderSuplidores()" style="background:var(--navy-800);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:7px 10px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;outline:none;">
-            <option value="">Todos los meses</option>
-          </select>
-          <select id="sup-filtro-cat" onchange="renderSuplidores()" style="background:var(--navy-800);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:7px 10px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;outline:none;">
-            <option value="">Todas las categorías</option>
-          </select>
+      <!-- ÓRDENES TAB -->
+      <div id="htab-content-ordenes">
+        <div class="historial-top">
+          <div><p style="color:var(--text-muted);font-size:13px;font-weight:300">Consulta y actualiza todas las órdenes.</p></div>
+          <div class="filters">
+            <select id="filtro-mes" onchange="renderHistorial()"><option value="">Todos los meses</option></select>
+            <select id="filtro-tipo" onchange="renderHistorial()"><option value="">Negocio + Clientes</option><option value="negocio">Solo Negocio</option><option value="cliente">Solo Clientes</option></select>
+            <select id="filtro-cat" onchange="renderHistorial()"><option value="">Todas las categorías</option></select>
+            <select id="filtro-estado" onchange="renderHistorial()"><option value="">Todos los estados</option><option>Pendiente</option><option>Ordenado</option><option>Recibido</option></select>
+            <input type="text" id="filtro-buscar" placeholder="🔍 Buscar..." oninput="renderHistorial()">
+          </div>
+        </div>
+        <div class="stats-row" id="stats-row"></div>
+        <div id="totals-bar" style="background:var(--navy-700);border:1px solid var(--border-light);border-radius:var(--radius);padding:12px 18px;margin-bottom:16px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;"></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Orden</th><th>Descripción</th><th>Tipo</th><th>Categoría</th><th>Costo</th><th>Tracking</th><th>Estado</th><th></th></tr></thead>
+            <tbody id="tabla-body"></tbody>
+          </table>
+          <div id="empty-state" class="empty-state" style="display:none"><div class="icon">📋</div><p>No hay órdenes registradas.</p></div>
         </div>
       </div>
-      <div class="stats-row" id="sup-stats-row"></div>
-      <div id="suplidores-content"></div>
+
+      <!-- SUPLIDORES TAB -->
+      <div id="htab-content-suplidores" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+          <p style="color:var(--text-muted);font-size:13px;font-weight:300">Gastos totales agrupados por suplidor.</p>
+          <div style="display:flex;gap:8px;">
+            <select id="sup-filtro-mes" onchange="renderSuplidores()" style="background:var(--navy-800);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:7px 10px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;outline:none;"><option value="">Todos los meses</option></select>
+            <select id="sup-filtro-cat" onchange="renderSuplidores()" style="background:var(--navy-800);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:7px 10px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;outline:none;"><option value="">Todas las categorías</option></select>
+          </div>
+        </div>
+        <div class="stats-row" id="sup-stats-row"></div>
+        <div id="suplidores-content"></div>
+      </div>
     </div>
 
     <!-- RESUMEN -->
@@ -738,10 +743,21 @@ window.showView=function(v,btn){
   document.querySelectorAll('nav button').forEach(el=>el.classList.remove('active'));
   document.getElementById('view-'+v).classList.add('active');
   if(btn)btn.classList.add('active');
-  if(v==='historial'){buildFilters();renderHistorial();}
+  if(v==='historial'){buildFilters();buildSupFilters();renderHistorial();}
   if(v==='dashboard')renderDashboard();
   if(v==='resumen')renderResumen();
-  if(v==='suplidores'){buildSupFilters();renderSuplidores();}
+}
+
+window.switchHistorialTab=function(tab){
+  // Toggle tab content
+  document.getElementById('htab-content-ordenes').style.display=tab==='ordenes'?'block':'none';
+  document.getElementById('htab-content-suplidores').style.display=tab==='suplidores'?'block':'none';
+  // Style tab buttons
+  const activeStyle='border-bottom:2px solid var(--gold);color:var(--gold);font-weight:600;';
+  const inactiveStyle='border-bottom:2px solid transparent;color:var(--text-muted);font-weight:500;';
+  document.getElementById('htab-ordenes').style.cssText+=tab==='ordenes'?activeStyle:inactiveStyle;
+  document.getElementById('htab-suplidores').style.cssText+=tab==='suplidores'?activeStyle:inactiveStyle;
+  if(tab==='suplidores')renderSuplidores();
 }
 
 window.selectTipo=function(tipo,btn){
@@ -822,13 +838,38 @@ function filteredCompras(){
 
 function renderHistorial(){
   const data=filteredCompras(),body=document.getElementById('tabla-body'),empty=document.getElementById('empty-state');
-  const total=data.reduce((s,c)=>s+(c.costo||0),0),negTotal=data.filter(c=>c.tipo==='negocio').reduce((s,c)=>s+(c.costo||0),0);
+  const total=data.reduce((s,c)=>s+(c.costo||0),0);
+  const totalSuplidores=data.filter(c=>c.suplidor&&c.suplidor.trim()).reduce((s,c)=>s+(c.costo||0),0);
+  const totalOtras=total-totalSuplidores;
   const pendientes=data.filter(c=>c.estado==='Pendiente').length;
   document.getElementById('stats-row').innerHTML=`
-    <div class="stat-card"><div class="s-label">Total Gastado</div><div class="s-value">$${total.toFixed(2)}</div></div>
-    <div class="stat-card"><div class="s-label">Para el Negocio</div><div class="s-value blue">$${negTotal.toFixed(2)}</div></div>
-    <div class="stat-card"><div class="s-label">Órdenes</div><div class="s-value white">${data.length}</div></div>
+    <div class="stat-card"><div class="s-label">Total General</div><div class="s-value">$${total.toFixed(2)}</div></div>
+    <div class="stat-card"><div class="s-label">Via Suplidores</div><div class="s-value blue">$${totalSuplidores.toFixed(2)}</div></div>
+    <div class="stat-card"><div class="s-label">Otras Compras</div><div class="s-value white">$${totalOtras.toFixed(2)}</div></div>
     <div class="stat-card"><div class="s-label">Pendientes</div><div class="s-value ${pendientes>0?'warn':'white'}">${pendientes}</div></div>`;
+  // Totals bar breakdown
+  const pctSup=total>0?Math.round((totalSuplidores/total)*100):0;
+  document.getElementById('totals-bar').innerHTML=`
+    <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-weight:600;white-space:nowrap">Desglose:</div>
+    <div style="flex:1;min-width:120px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px">
+        <span style="color:var(--text-secondary)">Suplidores</span>
+        <span style="font-family:'IBM Plex Mono',monospace;color:#90c0f0">$${totalSuplidores.toFixed(2)} (${pctSup}%)</span>
+      </div>
+      <div style="background:var(--border);border-radius:2px;height:5px;overflow:hidden">
+        <div style="height:100%;width:${pctSup}%;background:#5090d0;border-radius:2px;transition:width 0.4s"></div>
+      </div>
+    </div>
+    <div style="flex:1;min-width:120px">
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px">
+        <span style="color:var(--text-secondary)">Otras Compras</span>
+        <span style="font-family:'IBM Plex Mono',monospace;color:var(--text-muted)">$${totalOtras.toFixed(2)} (${100-pctSup}%)</span>
+      </div>
+      <div style="background:var(--border);border-radius:2px;height:5px;overflow:hidden">
+        <div style="height:100%;width:${100-pctSup}%;background:var(--text-muted);border-radius:2px;transition:width 0.4s"></div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--text-muted);white-space:nowrap">${data.length} órdenes</div>`;
   if(!data.length){body.innerHTML='';empty.style.display='block';return;}
   empty.style.display='none';
   body.innerHTML=data.slice().reverse().map(c=>{
