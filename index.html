@@ -47,7 +47,7 @@
   #screen-profile.hidden{display:none;}
 
   #app{display:none;}
-  header{background:var(--navy-800);border-bottom:1px solid var(--border);padding:0 32px;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:100;box-shadow:0 2px 20px rgba(0,0,0,0.4);}
+  header{background:var(--navy-800);border-bottom:1px solid var(--border);padding:0 32px;display:flex;align-items:center;justify-content:space-between;min-height:60px;position:sticky;top:0;z-index:100;box-shadow:0 2px 20px rgba(0,0,0,0.4);flex-wrap:wrap;gap:8px;}
   .logo{display:flex;align-items:center;gap:14px;}
   .logo-mark{width:32px;height:32px;border:1.5px solid var(--gold);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:15px;}
   .logo-text{font-family:'Playfair Display',serif;font-size:16px;font-weight:600;color:var(--white);}
@@ -194,13 +194,71 @@
   .btn-delete{flex:1;padding:10px;background:none;border:1px solid rgba(192,80,80,0.4);color:var(--danger);border-radius:var(--radius);font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:500;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.15s;}
   .btn-delete:hover{background:rgba(192,80,80,0.1);}
 
-  @media(max-width:680px){
-    header{padding:0 14px;}main{padding:16px 14px;}
-    .form-grid{grid-template-columns:1fr;}.form-group.full{grid-column:1;}
-    .stats-row,.dashboard-grid{grid-template-columns:1fr 1fr;}
+  @media(max-width:768px){
+    /* Header */
+    header{padding:12px 16px;height:auto;flex-wrap:wrap;gap:10px;}
+    .logo-sub,.logo-divider{display:none;}
+    .logo-mark{width:28px;height:28px;font-size:14px;}
+    .logo-text{font-size:15px;}
+
+    /* Nav & header right */
+    .header-right{width:100%;flex-direction:column;align-items:stretch;gap:8px;padding-bottom:4px;}
+    nav{width:100%;justify-content:stretch;padding:4px;}
+    nav button{flex:1;padding:9px 6px;font-size:11px;letter-spacing:0;}
+    .user-chip{justify-content:center;padding:8px 14px;}
+    .logout-btn{text-align:center;width:100%;padding:9px 14px;}
+
+    /* Main content */
+    main{padding:18px 16px;}
+    .page-header{flex-direction:column;align-items:flex-start;gap:12px;margin-bottom:20px;padding-bottom:16px;}
+    .page-header h1{font-size:22px;}
+
+    /* Cards & stats */
+    .dashboard-grid{grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;}
+    .dash-card{padding:14px 16px;}
+    .dash-card .dc-value{font-size:20px;}
+    .dash-card .dc-label{font-size:9px;}
+    .stats-row{grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+    .stat-card{padding:12px 14px;}
+    .stat-card .s-value{font-size:18px;}
+
+    /* Pending cards */
+    .pending-card{flex-direction:column;align-items:flex-start;gap:10px;padding:14px 16px;}
+    .pc-right{width:100%;justify-content:space-between;}
+
+    /* Chart */
+    .chart-wrap{padding:16px;}
+
+    /* Section titles */
+    .section-title{font-size:14px;margin-bottom:12px;}
+
+    /* Forms */
+    .form-grid{grid-template-columns:1fr;}
+    .form-group.full{grid-column:1;}
+    .form-section{padding:18px 16px;}
+    .form-footer{padding:16px;}
+    .section-label{font-size:9px;margin-bottom:12px;}
+    .tipo-group{grid-template-columns:1fr;}
+    input,select,textarea{padding:12px 14px;font-size:15px;}
+    label{font-size:10px;}
+
+    /* Historial */
+    .historial-top{flex-direction:column;align-items:stretch;gap:14px;margin-bottom:16px;}
+    .filters{flex-direction:column;gap:8px;}
+    .filters select,.filters input{width:100%;font-size:14px;padding:10px 12px;}
     th:nth-child(4),td:nth-child(4),th:nth-child(6),td:nth-child(6){display:none;}
-    .logo-sub,.logo-divider,.user-chip{display:none;}
-    nav button{padding:6px 10px;font-size:11px;}
+    th{padding:10px 10px;font-size:9px;}
+    td{padding:10px 10px;}
+
+    /* Modal */
+    .modal-overlay{align-items:flex-end;padding:0;}
+    .modal{border-radius:14px 14px 0 0;max-height:92vh;}
+    .modal-body{padding:18px 16px;gap:12px;}
+    .modal-footer{padding:14px 16px;gap:8px;}
+    .modal-header{padding:16px 18px;}
+
+    /* Auth screens */
+    .auth-card{padding:28px 20px;}
   }
 </style>
 </head>
@@ -446,7 +504,7 @@
 <!-- FIREBASE SDK -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCqQ32JY-O39R7_9pMnTEahDXb8MiIGuKg",
@@ -462,8 +520,7 @@
   const db = getFirestore(firebaseApp);
 
   // ── CONSTANTS ──
-  const PW_KEY = 'agro_pw_hash';
-  const SESSION_KEY = 'agro_session';
+  const SESSION_KEY = 'agro_session_v2';
   const PROFILE_KEY = 'agro_profile';
   const PRESETS_KEY = 'agro_employee_presets';
   let compras = [];
@@ -476,33 +533,51 @@
     return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,'0')).join('');
   }
 
+  async function getStoredHash() {
+    try {
+      const snap = await getDoc(doc(db, 'config', 'auth'));
+      return snap.exists() ? snap.data().pwHash : null;
+    } catch(e) { return null; }
+  }
+
   window.createPassword = async function() {
     const pw1 = document.getElementById('setup-pw1').value;
     const pw2 = document.getElementById('setup-pw2').value;
     const err = document.getElementById('setup-error');
     if (pw1.length < 4) { showErr(err,'La contraseña debe tener al menos 4 caracteres.'); return; }
     if (pw1 !== pw2) { showErr(err,'Las contraseñas no coinciden.'); return; }
-    localStorage.setItem(PW_KEY, await hashPw(pw1));
-    sessionStorage.setItem(SESSION_KEY,'ok');
-    document.getElementById('screen-setup').classList.add('hidden');
-    showProfileScreen();
+    showLoading('Guardando contraseña...');
+    try {
+      await setDoc(doc(db, 'config', 'auth'), { pwHash: await hashPw(pw1) });
+      localStorage.setItem(SESSION_KEY,'ok');
+      document.getElementById('screen-setup').classList.add('hidden');
+      showProfileScreen();
+    } catch(e) {
+      showErr(err, 'Error al guardar. Verifica tu conexión.');
+    } finally { hideLoading(); }
   }
 
   window.doLogin = async function() {
     const pw = document.getElementById('login-pw').value;
     const err = document.getElementById('login-error');
-    if (await hashPw(pw) === localStorage.getItem(PW_KEY)) {
-      sessionStorage.setItem(SESSION_KEY,'ok');
-      document.getElementById('screen-login').classList.add('hidden');
-      showProfileScreen();
-    } else {
-      showErr(err,'Contraseña incorrecta.');
-      document.getElementById('login-pw').value = '';
-    }
+    showLoading('Verificando...');
+    try {
+      const storedHash = await getStoredHash();
+      if (await hashPw(pw) === storedHash) {
+        localStorage.setItem(SESSION_KEY,'ok');
+        document.getElementById('screen-login').classList.add('hidden');
+        showProfileScreen();
+      } else {
+        showErr(err,'Contraseña incorrecta.');
+        document.getElementById('login-pw').value = '';
+      }
+    } catch(e) {
+      showErr(err, 'Error de conexión. Intenta de nuevo.');
+    } finally { hideLoading(); }
   }
 
   window.doLogout = function() {
-    sessionStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(SESSION_KEY);
     document.getElementById('app').style.display = 'none';
     document.getElementById('screen-login').classList.remove('hidden');
     document.getElementById('login-pw').value = '';
@@ -843,12 +918,19 @@
 
   // ── BOOT ──
   async function boot() {
-    const stored = localStorage.getItem(PW_KEY);
-    const session = sessionStorage.getItem(SESSION_KEY);
-    if (!stored) { document.getElementById('screen-setup').classList.remove('hidden'); return; }
-    if (session === 'ok') { showProfileScreen(); return; }
-    document.getElementById('screen-setup').classList.add('hidden');
-    document.getElementById('screen-login').classList.remove('hidden');
+    showLoading('Iniciando...');
+    try {
+      const storedHash = await getStoredHash();
+      const session = localStorage.getItem(SESSION_KEY);
+      hideLoading();
+      if (!storedHash) { document.getElementById('screen-setup').classList.remove('hidden'); return; }
+      if (session === 'ok') { showProfileScreen(); return; }
+      document.getElementById('screen-setup').classList.add('hidden');
+      document.getElementById('screen-login').classList.remove('hidden');
+    } catch(e) {
+      hideLoading();
+      document.getElementById('screen-login').classList.remove('hidden');
+    }
   }
 
   boot();
