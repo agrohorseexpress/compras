@@ -529,7 +529,15 @@ async function hashPw(pw){
   return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
 }
 async function getStoredHash(){
-  try{const snap=await getDoc(doc(db,'config','auth'));return snap.exists()?snap.data().pwHash:null;}catch(e){return null;}
+  for(let i=0;i<3;i++){
+    try{
+      const snap=await getDoc(doc(db,'config','auth'));
+      return snap.exists()?snap.data().pwHash:null;
+    }catch(e){
+      if(i<2)await new Promise(r=>setTimeout(r,1000));
+    }
+  }
+  return null;
 }
 
 window.createPassword=async function(){
@@ -984,18 +992,36 @@ window.closeModalOutside=function(e){if(e.target===document.getElementById('moda
 window.closeModalBtn=function(){document.getElementById('modal-overlay').classList.remove('open');editIndex=null;}
 
 // ── BOOT ──
+const PW_EVER_SET = 'agro_pw_set_v3'; // flag: password was set at least once
+
 async function boot(){
   showLoading('Iniciando...');
   try{
-    const stored=await getStoredHash();
     const session=localStorage.getItem(SESSION_KEY);
+    const everSet=localStorage.getItem(PW_EVER_SET);
+
+    // If we know a password was set before, skip Firebase check and go straight to login
+    if(everSet==='yes'){
+      hideLoading();
+      if(session==='ok'){await showProfileScreen();return;}
+      document.getElementById('screen-login').classList.remove('hidden');
+      return;
+    }
+
+    // First time ever — check Firebase to be sure
+    const stored=await getStoredHash();
     hideLoading();
-    if(!stored){document.getElementById('screen-setup').classList.remove('hidden');return;}
-    if(session==='ok'){await showProfileScreen();return;}
-    document.getElementById('screen-setup').classList.add('hidden');
-    document.getElementById('screen-login').classList.remove('hidden');
+    if(!stored){
+      document.getElementById('screen-setup').classList.remove('hidden');
+    }else{
+      // Password exists in Firebase but flag wasn't set (old device)
+      localStorage.setItem(PW_EVER_SET,'yes');
+      if(session==='ok'){await showProfileScreen();return;}
+      document.getElementById('screen-login').classList.remove('hidden');
+    }
   }catch(e){
     hideLoading();
+    // On error, show login — safer than showing setup
     document.getElementById('screen-login').classList.remove('hidden');
   }
 }
