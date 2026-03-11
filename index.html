@@ -615,7 +615,7 @@ window.addPreset=async function(){
 
 window.selectPreset=function(name){
   cancelLongPress();
-  sessionStorage.setItem(PROFILE_KEY,name);
+  localStorage.setItem(PROFILE_KEY,name);
   document.getElementById('screen-profile').classList.add('hidden');
   showApp(name);
 }
@@ -663,7 +663,7 @@ async function loadData(showMsg){
 window.guardarCompra=async function(){
   const desc=document.getElementById('descripcion').value.trim();
   if(!desc){alert('Por favor describe qué se pidió.');return;}
-  const emp=sessionStorage.getItem(PROFILE_KEY)||'—';
+  const emp=localStorage.getItem(PROFILE_KEY)||'—';
   const btn=document.getElementById('submit-btn');
   btn.disabled=true;btn.textContent='Guardando...';
   showLoading('Guardando orden...');
@@ -794,7 +794,7 @@ function updateNavBadge(){
 function renderDashboard(){
   var now=new Date();
   var greet=now.getHours()<12?'Buenos días':now.getHours()<18?'Buenas tardes':'Buenas noches';
-  var name=sessionStorage.getItem(PROFILE_KEY)||'';
+  var name=localStorage.getItem(PROFILE_KEY)||'';
   document.getElementById('dash-greeting').textContent=greet+(name?', '+name.split(' ')[0]:'');
   document.getElementById('dash-date').textContent=now.toLocaleDateString('es',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   var mesActual=now.toISOString().substring(0,7);
@@ -983,6 +983,19 @@ window.closeModalBtn=function(){document.getElementById('modal-overlay').classLi
 async function boot(){
   var session=localStorage.getItem(SESSION_KEY);
   if(session==='ok'){
+    var savedProfile=localStorage.getItem(PROFILE_KEY);
+    if(savedProfile){
+      // Already know who they are — go straight to app
+      document.getElementById('header-username').textContent=savedProfile;
+      document.getElementById('app').style.display='block';
+      document.getElementById('fecha').value=new Date().toISOString().split('T')[0];
+      var lastView=localStorage.getItem(VIEW_KEY)||'dashboard';
+      showLoading('Cargando...');
+      await loadData();
+      showView(lastView);
+      return;
+    }
+    // Logged in but no profile selected
     showLoading('Iniciando...');
     await showProfileScreen();
     hideLoading();
