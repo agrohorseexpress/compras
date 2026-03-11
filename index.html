@@ -539,7 +539,7 @@ window.createPassword=async function(){
   showLoading('Guardando contraseña...');
   try{
     await setDoc(doc(db,'config','auth'),{pwHash:await hashPw(pw1)});
-    sessionStorage.setItem(SESSION_KEY,'ok');
+    localStorage.setItem(SESSION_KEY,'ok');
     document.getElementById('screen-setup').classList.add('hidden');
     await showProfileScreen();
   }catch(e){showErr(err,'Error al guardar. Verifica tu conexión.');}
@@ -552,7 +552,7 @@ window.doLogin=async function(){
   try{
     const stored=await getStoredHash();
     if(await hashPw(pw)===stored){
-      sessionStorage.setItem(SESSION_KEY,'ok');
+      localStorage.setItem(SESSION_KEY,'ok');
       document.getElementById('screen-login').classList.add('hidden');
       await showProfileScreen();
     }else{
@@ -564,7 +564,7 @@ window.doLogin=async function(){
 }
 
 window.doLogout=function(){
-  sessionStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(SESSION_KEY);
   sessionStorage.removeItem(PROFILE_KEY);
   document.getElementById('app').style.display='none';
   document.getElementById('screen-login').classList.remove('hidden');
@@ -988,7 +988,7 @@ async function boot(){
   showLoading('Iniciando...');
   try{
     const stored=await getStoredHash();
-    const session=sessionStorage.getItem(SESSION_KEY);
+    const session=localStorage.getItem(SESSION_KEY);
     hideLoading();
     if(!stored){document.getElementById('screen-setup').classList.remove('hidden');return;}
     if(session==='ok'){await showProfileScreen();return;}
