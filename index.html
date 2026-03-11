@@ -219,7 +219,7 @@ tr:hover td{background:var(--navy-700);}
 <body>
 
 <!-- SETUP -->
-<div class="auth-screen" id="screen-setup">
+<div class="auth-screen hidden" id="screen-setup">
   <div class="auth-card">
     <div class="auth-logo"><div class="auth-logo-mark">🐴</div><div class="auth-logo-text">Agro Horse <span>Express</span></div></div>
     <div class="auth-title">Bienvenido</div>
@@ -261,6 +261,9 @@ tr:hover td{background:var(--navy-700);}
     <div class="auth-error" id="login-error"></div>
     <div style="margin-bottom:20px"></div>
     <button class="auth-btn" onclick="doLogin()">Entrar</button>
+    <div style="text-align:center;margin-top:16px">
+      <button onclick="showSetup()" style="background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;text-decoration:underline;">Primera vez aquí — crear contraseña</button>
+    </div>
   </div>
 </div>
 
@@ -366,7 +369,7 @@ tr:hover td{background:var(--navy-700);}
         <div class="form-section">
           <div class="section-label">Detalle</div>
           <div class="form-grid">
-            <div class="form-group full"><label>¿Qué se pidió?</label><textarea id="descripcion" placeholder="Ej: Filtro de aire Stihl FS 55, parte 4140-141-0300"></textarea></div>
+            <div class="form-group full"><label>¿Qué se pidió?</label><textarea id="descripcion" placeholder="Ej: Filtro de aire Stihl FS 55, parte 4140-141-0300" oninput="markDirty()"></textarea></div>
             <div class="form-group full"><label>¿Por qué se pidió?</label><textarea id="razon" placeholder="Ej: Stock bajo. / Cliente trajo equipo para reparación." style="min-height:52px"></textarea></div>
           </div>
         </div>
@@ -385,7 +388,8 @@ tr:hover td{background:var(--navy-700);}
             </div>
             <div class="form-group"><label>Costo Total ($)</label><input type="number" id="costo" placeholder="0.00" step="0.01" min="0"></div>
             <div class="form-group"><label>Fecha</label><input type="date" id="fecha"></div>
-            <div class="form-group full"><label>Número de Tracking</label><input type="text" id="tracking" placeholder="Ej: 1Z999AA10123456784"></div>
+            <div class="form-group"><label>Número de Tracking</label><input type="text" id="tracking" placeholder="Ej: 1Z999AA10123456784"></div>
+            <div class="form-group"><label>Fecha de Entrega Esperada</label><input type="date" id="fecha-entrega"></div>
           </div>
         </div>
         <div class="form-footer">
@@ -405,12 +409,16 @@ tr:hover td{background:var(--navy-700);}
       <!-- ÓRDENES TAB -->
       <div id="htab-content-ordenes">
         <div class="historial-top">
-          <div><p style="color:var(--text-muted);font-size:13px;font-weight:300">Consulta y actualiza todas las órdenes.</p></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:4px;">
+            <p style="color:var(--text-muted);font-size:13px;font-weight:300">Consulta y actualiza todas las órdenes.</p>
+            <button onclick="exportarCSV()" style="background:none;border:1px solid var(--border-light);color:var(--text-secondary);padding:6px 12px;border-radius:var(--radius);font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:500;letter-spacing:0.5px;text-transform:uppercase;cursor:pointer;transition:all 0.15s;" onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='var(--border-light)';this.style.color='var(--text-secondary)'">⬇ Exportar CSV</button>
+          </div>
           <div class="filters">
             <select id="filtro-mes" onchange="renderHistorial()"><option value="">Todos los meses</option></select>
             <select id="filtro-tipo" onchange="renderHistorial()"><option value="">Negocio + Clientes</option><option value="negocio">Solo Negocio</option><option value="cliente">Solo Clientes</option></select>
             <select id="filtro-cat" onchange="renderHistorial()"><option value="">Todas las categorías</option></select>
             <select id="filtro-estado" onchange="renderHistorial()"><option value="">Todos los estados</option><option>Pendiente</option><option>Ordenado</option><option>Recibido</option></select>
+            <select id="filtro-empleado" onchange="renderHistorial()"><option value="">Todos los empleados</option></select>
             <input type="text" id="filtro-buscar" placeholder="🔍 Buscar..." oninput="renderHistorial()">
           </div>
         </div>
@@ -418,7 +426,7 @@ tr:hover td{background:var(--navy-700);}
         <div id="totals-bar" style="background:var(--navy-700);border:1px solid var(--border-light);border-radius:var(--radius);padding:12px 18px;margin-bottom:16px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;"></div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Orden</th><th>Descripción</th><th>Tipo</th><th>Categoría</th><th>Costo</th><th>Tracking</th><th>Estado</th><th></th></tr></thead>
+            <thead><tr><th>Orden</th><th>Descripción</th><th>Tipo</th><th>Categoría</th><th>Costo</th><th>F. Entrega</th><th>Estado</th><th>Notas</th><th></th></tr></thead>
             <tbody id="tabla-body"></tbody>
           </table>
           <div id="empty-state" class="empty-state" style="display:none"><div class="icon">📋</div><p>No hay órdenes registradas.</p></div>
@@ -470,7 +478,10 @@ tr:hover td{background:var(--navy-700);}
         <div class="form-group"><label>Suplidor</label><input type="text" id="edit-suplidor"></div>
         <div class="form-group"><label>Estado</label><select id="edit-estado" onchange="toggleNotaField()"><option>Pendiente</option><option>Ordenado</option><option>Recibido</option></select></div>
       </div>
-      <div class="form-group"><label>Tracking</label><input type="text" id="edit-tracking"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label>Tracking</label><input type="text" id="edit-tracking"></div>
+        <div class="form-group"><label>F. Entrega Esperada</label><input type="date" id="edit-fecha-entrega"></div>
+      </div>
       <div class="form-group" id="nota-field" style="display:none">
         <label>Nota al cambiar estado</label>
         <textarea id="edit-nota" placeholder="Ej: Llegó incompleto. / Llegó con daño." style="min-height:52px"></textarea>
@@ -488,7 +499,7 @@ tr:hover td{background:var(--navy-700);}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, setDoc, getDoc, runTransaction, increment } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const FB = {
   apiKey:"AIzaSyCqQ32JY-O39R7_9pMnTEahDXb8MiIGuKg",
@@ -652,7 +663,8 @@ function showApp(name){
   document.getElementById('header-username').textContent=name;
   document.getElementById('app').style.display='block';
   document.getElementById('fecha').value=new Date().toISOString().split('T')[0];
-  loadData();
+  const lastView=localStorage.getItem(VIEW_KEY)||'dashboard';
+  loadData().then(()=>showView(lastView));
 }
 
 // ── FIREBASE COMPRAS ──
@@ -669,6 +681,22 @@ async function loadData(showMsg=false){
   finally{hideLoading();}
 }
 
+// Track if form is dirty (has unsaved changes)
+let formDirty=false;
+function markDirty(){formDirty=true;}
+function clearDirty(){formDirty=false;}
+
+async function getNextNum(){
+  const counterRef=doc(db,'config','counter');
+  let newNum=1;
+  await runTransaction(db,async t=>{
+    const snap=await t.get(counterRef);
+    newNum=snap.exists()?(snap.data().lastNum||0)+1:1;
+    t.set(counterRef,{lastNum:newNum});
+  });
+  return newNum;
+}
+
 window.guardarCompra=async function(){
   const desc=document.getElementById('descripcion').value.trim();
   if(!desc){alert('Por favor describe qué se pidió.');return;}
@@ -677,8 +705,9 @@ window.guardarCompra=async function(){
   btn.disabled=true;btn.textContent='Guardando...';
   showLoading('Guardando orden...');
   try{
+    const num=await getNextNum();
     const orden={
-      num:compras.length+1,
+      num,
       tipo:document.getElementById('tipo').value,
       cliente:document.getElementById('cliente').value.trim(),
       descripcion:desc,
@@ -686,6 +715,7 @@ window.guardarCompra=async function(){
       categoria:document.getElementById('categoria').value,
       empleado:emp,
       fecha:document.getElementById('fecha').value,
+      fechaEntrega:document.getElementById('fecha-entrega').value,
       suplidor:document.getElementById('suplidor').value.trim(),
       donde:document.getElementById('donde').value,
       costo:parseFloat(document.getElementById('costo').value)||0,
@@ -696,8 +726,9 @@ window.guardarCompra=async function(){
     };
     await addDoc(collection(db,'compras'),orden);
     await loadData();
+    clearDirty();
     resetForm();
-    showToast('✓ Orden #'+orden.num+' guardada');
+    showToast('✓ Orden #'+num+' guardada');
     showView('dashboard',document.querySelector('nav button'));
   }catch(e){showToast('Error al guardar. Intenta de nuevo.');console.error(e);}
   finally{btn.disabled=false;btn.textContent='Registrar Orden de Compra';hideLoading();}
@@ -722,6 +753,7 @@ window.guardarEdicion=async function(){
       suplidor:document.getElementById('edit-suplidor').value,
       estado:newEstado,
       tracking:document.getElementById('edit-tracking').value,
+      fechaEntrega:document.getElementById('edit-fecha-entrega').value,
       notas:notasNuevas,
     });
     await loadData();
@@ -746,11 +778,44 @@ window.eliminarCompra=async function(){
 }
 
 // ── VIEWS ──
+const VIEW_KEY='agro_view_v3';
+
+window.exportarCSV=function(){
+  const data=filteredCompras();
+  if(!data.length){showToast('No hay datos para exportar.');return;}
+  const headers=['Orden','Fecha','Empleado','Tipo','Cliente','Categoría','Descripción','Razón','Suplidor','Dónde','Costo','Tracking','F.Entrega','Estado','Notas'];
+  const rows=data.slice().sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')).map(c=>[
+    'ORD-'+String(c.num||'?').padStart(4,'0'),
+    c.fecha||'',c.empleado||'',c.tipo||'',c.cliente||'',c.categoria||'',
+    (c.descripcion||'').replace(/,/g,';'),
+    (c.razon||'').replace(/,/g,';'),
+    c.suplidor||'',c.donde||'',c.costo||0,c.tracking||'',
+    c.fechaEntrega||'',c.estado||'',
+    (c.notas||'').replace(/[
+,]/g,' ')
+  ]);
+  const csv=[headers,...rows].map(r=>r.join(',')).join('
+');
+  const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  const mes=document.getElementById('filtro-mes').value||'todo';
+  a.download=`compras-${mes}.csv`;
+  a.click();
+  showToast('✓ CSV exportado');
+}
+
 window.showView=function(v,btn){
+  if(v!=='nueva'&&formDirty){
+    if(!confirm('¿Salir sin guardar? Se perderán los datos de la orden.'))return;
+    clearDirty();
+  }
   document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(el=>el.classList.remove('active'));
   document.getElementById('view-'+v).classList.add('active');
   if(btn)btn.classList.add('active');
+  else{const nb=document.querySelector(`nav button[onclick*="${v}"]`);if(nb)nb.classList.add('active');}
+  localStorage.setItem(VIEW_KEY,v);
   if(v==='historial'){buildFilters();buildSupFilters();renderHistorial();}
   if(v==='dashboard')renderDashboard();
   if(v==='resumen')renderResumen();
@@ -776,7 +841,7 @@ window.selectTipo=function(tipo,btn){
 }
 
 function resetForm(){
-  ['descripcion','razon','cliente','suplidor','tracking'].forEach(id=>document.getElementById(id).value='');
+  ['descripcion','razon','cliente','suplidor','tracking','fecha-entrega'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('costo').value='';document.getElementById('donde').value='';
   document.getElementById('categoria').value='';document.getElementById('estado').value='Pendiente';
   document.getElementById('fecha').value=new Date().toISOString().split('T')[0];
@@ -784,6 +849,7 @@ function resetForm(){
   document.querySelectorAll('.tipo-btn').forEach(b=>b.className='tipo-btn');
   document.querySelector('.tipo-btn').className='tipo-btn sel-negocio';
   document.getElementById('grupo-cliente').style.display='none';
+  clearDirty();
 }
 
 function updateNavBadge(){
@@ -828,17 +894,23 @@ function buildFilters(){
   const cat=document.getElementById('filtro-cat');
   cat.innerHTML='<option value="">Todas las categorías</option>';
   CATS.forEach(c=>cat.innerHTML+=`<option>${c}</option>`);
+  const emp=document.getElementById('filtro-empleado');
+  const empleados=[...new Set(compras.map(c=>c.empleado||'').filter(Boolean))].sort();
+  emp.innerHTML='<option value="">Todos los empleados</option>';
+  empleados.forEach(e=>emp.innerHTML+=`<option>${e}</option>`);
 }
 
 function filteredCompras(){
   const mes=document.getElementById('filtro-mes').value,tipo=document.getElementById('filtro-tipo').value;
   const cat=document.getElementById('filtro-cat').value,estado=document.getElementById('filtro-estado').value;
+  const emp=document.getElementById('filtro-empleado').value;
   const q=document.getElementById('filtro-buscar').value.toLowerCase();
   return compras.filter(c=>{
     if(mes&&!(c.fecha||'').startsWith(mes))return false;
     if(tipo&&c.tipo!==tipo)return false;
     if(cat&&c.categoria!==cat)return false;
     if(estado&&c.estado!==estado)return false;
+    if(emp&&c.empleado!==emp)return false;
     if(q&&![c.descripcion,c.empleado,c.suplidor,c.cliente,c.tracking,c.categoria].join(' ').toLowerCase().includes(q))return false;
     return true;
   });
@@ -880,11 +952,15 @@ function renderHistorial(){
     <div style="font-size:11px;color:var(--text-muted);white-space:nowrap">${data.length} órdenes</div>`;
   if(!data.length){body.innerHTML='';empty.style.display='block';return;}
   empty.style.display='none';
-  body.innerHTML=data.slice().reverse().map(c=>{
+  // Sort by date descending (most recent first)
+  const sorted=data.slice().sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  body.innerHTML=sorted.map(c=>{
     const idx=compras.indexOf(c);
     const fecha=c.fecha?new Date(c.fecha+'T12:00:00').toLocaleDateString('es',{day:'numeric',month:'short',year:'2-digit'}):'';
+    const fechaEnt=c.fechaEntrega?new Date(c.fechaEntrega+'T12:00:00').toLocaleDateString('es',{day:'numeric',month:'short',year:'2-digit'}):'—';
     const estadoClass=c.estado==='Recibido'?'badge-recibido':c.estado==='Ordenado'?'badge-ordenado':'badge-pendiente';
-    return`<tr><td><div class="order-num">ORD-${String(c.num||'?').padStart(4,'0')}</div><div class="order-meta">${fecha}<br>${c.empleado}</div></td><td class="col-desc"><div class="main">${(c.descripcion||'').substring(0,75)}${(c.descripcion||'').length>75?'…':''}</div>${c.razon?`<div class="sub">${c.razon.substring(0,55)}${c.razon.length>55?'…':''}</div>`:''}</td><td><span class="badge badge-${c.tipo}">${c.tipo==='negocio'?'Negocio':'Cliente'}</span></td><td style="color:var(--text-secondary);font-size:12px">${c.categoria||'—'}</td><td class="price">${c.costo?'$'+c.costo.toFixed(2):'—'}</td><td>${c.tracking?`<span class="tracking-chip">${c.tracking.substring(0,14)}${c.tracking.length>14?'…':''}</span>`:'—'}</td><td><span class="badge ${estadoClass}">${c.estado}</span></td><td><button class="action-btn" onclick="openModal(${idx})">Editar</button></td></tr>`;
+    const notasHtml=c.notas?`<div style="font-size:11px;color:var(--text-muted);max-width:140px;line-height:1.4;cursor:pointer" title="${c.notas.replace(/"/g,"'")}">${c.notas.substring(0,40)}${c.notas.length>40?'…':''}</div>`:'<span style="color:var(--border-light)">—</span>';
+    return`<tr><td><div class="order-num">ORD-${String(c.num||'?').padStart(4,'0')}</div><div class="order-meta">${fecha}<br>${c.empleado}</div></td><td class="col-desc"><div class="main">${(c.descripcion||'').substring(0,75)}${(c.descripcion||'').length>75?'…':''}</div>${c.razon?`<div class="sub">${c.razon.substring(0,55)}${c.razon.length>55?'…':''}</div>`:''}</td><td><span class="badge badge-${c.tipo}">${c.tipo==='negocio'?'Negocio':'Cliente'}</span></td><td style="color:var(--text-secondary);font-size:12px">${c.categoria||'—'}</td><td class="price">${c.costo?'$'+c.costo.toFixed(2):'—'}</td><td style="font-size:11px;color:var(--text-secondary);white-space:nowrap">${fechaEnt}</td><td><span class="badge ${estadoClass}">${c.estado}</span></td><td>${notasHtml}</td><td><button class="action-btn" onclick="openModal(${idx})">Editar</button></td></tr>`;
   }).join('');
 }
 
@@ -959,13 +1035,71 @@ function renderResumen(){
   const now=new Date(),months=[];
   for(let i=5;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);months.push({key:d.toISOString().substring(0,7),label:d.toLocaleDateString('es',{month:'long',year:'numeric'})});}
   let html='';
+  let grandTotal=0;
+  const allMonthData=[];
   months.reverse().forEach(m=>{
     const data=compras.filter(c=>c.fecha&&c.fecha.startsWith(m.key));
     if(!data.length)return;
     const total=data.reduce((s,c)=>s+(c.costo||0),0);
+    grandTotal+=total;
+    allMonthData.push({m,data,total});
+  });
+  // Grand total bar at top
+  if(allMonthData.length){
+    const totalSup=compras.filter(c=>c.suplidor&&c.suplidor.trim()).reduce((s,c)=>s+(c.costo||0),0);
+    const totalOtras=grandTotal-totalSup;
+    const pctSup=grandTotal>0?Math.round((totalSup/grandTotal)*100):0;
+    html+=`<div style="background:var(--navy-800);border:1px solid var(--border-light);border-radius:var(--radius);padding:16px 20px;margin-bottom:24px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted)">Total Histórico (6 meses)</div>
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:20px;color:var(--gold)">$${grandTotal.toFixed(2)}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px"><span style="color:var(--text-secondary)">Suplidores</span><span style="font-family:'IBM Plex Mono',monospace;color:#90c0f0">$${totalSup.toFixed(2)} (${pctSup}%)</span></div>
+          <div style="background:var(--border);border-radius:2px;height:5px;overflow:hidden"><div style="height:100%;width:${pctSup}%;background:#5090d0;border-radius:2px"></div></div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px"><span style="color:var(--text-secondary)">Otras Compras</span><span style="font-family:'IBM Plex Mono',monospace;color:var(--text-muted)">$${totalOtras.toFixed(2)} (${100-pctSup}%)</span></div>
+          <div style="background:var(--border);border-radius:2px;height:5px;overflow:hidden"><div style="height:100%;width:${100-pctSup}%;background:var(--text-muted);border-radius:2px"></div></div>
+        </div>
+      </div>
+    </div>`;
+  }
+  allMonthData.forEach(({m,data,total})=>{
     const catTotals=CATS.map(cat=>({cat,total:data.filter(c=>c.categoria===cat).reduce((s,c)=>s+(c.costo||0),0)})).filter(x=>x.total>0).sort((a,b)=>b.total-a.total);
     const maxCat=catTotals.length?catTotals[0].total:1;
-    html+=`<div style="margin-bottom:22px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px"><div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:600;color:var(--white);text-transform:capitalize">${m.label}</div><div style="font-family:'IBM Plex Mono',monospace;font-size:15px;color:var(--gold)">$${total.toFixed(2)}</div></div><div class="resumen-card">${catTotals.map(x=>`<div class="cat-row"><span class="cat-name">${x.cat}</span><div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:${Math.round(x.total/maxCat*100)}%"></div></div><span class="cat-amt">$${x.total.toFixed(2)}</span></div>`).join('')}${!catTotals.length?'<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:10px">Sin categorías asignadas</div>':''}<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:11px"><span style="color:var(--text-muted)">${data.length} órdenes</span><span style="color:var(--text-muted)">${data.filter(c=>c.estado==='Recibido').length} recibidas</span></div></div></div>`;
+    // Top suplidores this month
+    const supMap={};
+    data.filter(c=>c.suplidor&&c.suplidor.trim()).forEach(c=>{supMap[c.suplidor]=(supMap[c.suplidor]||0)+(c.costo||0);});
+    const topSups=Object.entries(supMap).sort((a,b)=>b[1]-a[1]).slice(0,4);
+    const maxSup=topSups[0]?.[1]||1;
+    const totalMesSup=data.filter(c=>c.suplidor&&c.suplidor.trim()).reduce((s,c)=>s+(c.costo||0),0);
+    const totalMesOtras=total-totalMesSup;
+    html+=`<div style="margin-bottom:24px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-family:'Playfair Display',serif;font-size:16px;font-weight:600;color:var(--white);text-transform:capitalize">${m.label}</div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <span style="font-size:11px;color:var(--text-muted)">${data.length} órdenes</span>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:15px;color:var(--gold)">$${total.toFixed(2)}</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="resumen-card">
+          <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold);margin-bottom:10px">Por Categoría</div>
+          ${catTotals.map(x=>`<div class="cat-row"><span class="cat-name">${x.cat}</span><div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:${Math.round(x.total/maxCat*100)}%"></div></div><span class="cat-amt">$${x.total.toFixed(2)}</span></div>`).join('')}
+          ${!catTotals.length?'<div style="color:var(--text-muted);font-size:12px;text-align:center;padding:6px">Sin categorías</div>':''}
+        </div>
+        <div class="resumen-card">
+          <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold);margin-bottom:10px">Por Suplidor</div>
+          ${topSups.map(([n,v])=>`<div class="cat-row"><span class="cat-name" style="font-size:12px">${n}</span><div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:${Math.round(v/maxSup*100)}%;background:#5090d0"></div></div><span class="cat-amt">$${v.toFixed(2)}</span></div>`).join('')}
+          ${!topSups.length?'<div style="color:var(--text-muted);font-size:12px;text-align:center;padding:6px">Sin suplidores</div>':''}
+          <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:10px;color:var(--text-muted)">
+            <span>Sup: $${totalMesSup.toFixed(2)}</span><span>Otras: $${totalMesOtras.toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+    </div>`;
   });
   document.getElementById('resumen-content').innerHTML=html||'<div class="empty-state"><div class="icon">📊</div><p>No hay datos todavía.</p></div>';
 }
@@ -984,6 +1118,7 @@ window.openModal=function(idx){
   document.getElementById('edit-suplidor').value=c.suplidor||'';
   document.getElementById('edit-estado').value=c.estado||'Pendiente';
   document.getElementById('edit-tracking').value=c.tracking||'';
+  document.getElementById('edit-fecha-entrega').value=c.fechaEntrega||'';
   document.getElementById('edit-nota').value='';
   document.getElementById('nota-field').style.display='none';
   document.getElementById('modal-overlay').classList.add('open');
@@ -992,38 +1127,22 @@ window.closeModalOutside=function(e){if(e.target===document.getElementById('moda
 window.closeModalBtn=function(){document.getElementById('modal-overlay').classList.remove('open');editIndex=null;}
 
 // ── BOOT ──
-const PW_EVER_SET = 'agro_pw_set_v3'; // flag: password was set at least once
-
 async function boot(){
-  showLoading('Iniciando...');
-  try{
-    const session=localStorage.getItem(SESSION_KEY);
-    const everSet=localStorage.getItem(PW_EVER_SET);
-
-    // If we know a password was set before, skip Firebase check and go straight to login
-    if(everSet==='yes'){
-      hideLoading();
-      if(session==='ok'){await showProfileScreen();return;}
-      document.getElementById('screen-login').classList.remove('hidden');
-      return;
-    }
-
-    // First time ever — check Firebase to be sure
-    const stored=await getStoredHash();
+  const session=localStorage.getItem(SESSION_KEY);
+  // Always go to login first — never assume setup is needed
+  if(session==='ok'){
+    showLoading('Iniciando...');
+    await showProfileScreen();
     hideLoading();
-    if(!stored){
-      document.getElementById('screen-setup').classList.remove('hidden');
-    }else{
-      // Password exists in Firebase but flag wasn't set (old device)
-      localStorage.setItem(PW_EVER_SET,'yes');
-      if(session==='ok'){await showProfileScreen();return;}
-      document.getElementById('screen-login').classList.remove('hidden');
-    }
-  }catch(e){
-    hideLoading();
-    // On error, show login — safer than showing setup
-    document.getElementById('screen-login').classList.remove('hidden');
+    return;
   }
+  // Default: show login screen
+  document.getElementById('screen-login').classList.remove('hidden');
+}
+
+window.showSetup=function(){
+  document.getElementById('screen-login').classList.add('hidden');
+  document.getElementById('screen-setup').classList.remove('hidden');
 }
 
 boot();
