@@ -860,7 +860,7 @@ function filteredCompras(){
   });
 }
 
-function renderHistorial(){
+window.renderHistorial = function renderHistorial(){
   var data=filteredCompras(),body=document.getElementById('tabla-body'),empty=document.getElementById('empty-state');
   var total=data.reduce(function(s,c){return s+(c.costo||0);},0);
   var totalSup=data.filter(function(c){return c.suplidor&&c.suplidor.trim();}).reduce(function(s,c){return s+(c.costo||0);},0);
@@ -906,7 +906,7 @@ function buildSupFilters(){
   CATS.forEach(function(c){cat.innerHTML+='<option>'+c+'</option>';});
 }
 
-function renderSuplidores(){
+window.renderSuplidores = function renderSuplidores(){
   var mes=document.getElementById('sup-filtro-mes').value;
   var cat=document.getElementById('sup-filtro-cat').value;
   var data=compras.filter(function(c){return c.suplidor&&c.suplidor.trim();});
