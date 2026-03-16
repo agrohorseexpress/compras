@@ -835,18 +835,30 @@ function buildFilters(){
   CATS.forEach(function(c){cat.innerHTML+='<option>'+c+'</option>';});
 }
 
+function normalizar(str){
+  return (str||'').toString().toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g,'');
+}
+
 function filteredCompras(){
   var mes=document.getElementById('filtro-mes').value;
   var tipo=document.getElementById('filtro-tipo').value;
   var cat=document.getElementById('filtro-cat').value;
   var estado=document.getElementById('filtro-estado').value;
-  var q=document.getElementById('filtro-buscar').value.toLowerCase();
+  var q=normalizar(document.getElementById('filtro-buscar').value.trim());
   return compras.filter(function(c){
     if(mes&&!(c.fecha||'').startsWith(mes))return false;
-    if(tipo&&c.tipo!==tipo)return false;
-    if(cat&&c.categoria!==cat)return false;
-    if(estado&&c.estado!==estado)return false;
-    if(q&&![c.descripcion,c.empleado,c.suplidor,c.cliente,c.tracking,c.categoria].join(' ').toLowerCase().includes(q))return false;
+    if(tipo&&(c.tipo||'')!==tipo)return false;
+    if(cat&&(c.categoria||'')!==cat)return false;
+    if(estado&&(c.estado||'')!==estado)return false;
+    if(q){
+      var campos=[
+        c.descripcion, c.empleado, c.suplidor, c.cliente,
+        c.tracking, c.categoria, c.razon, c.donde,
+        c.num ? 'ORD-'+String(c.num).padStart(4,'0') : ''
+      ].map(function(v){return normalizar(v);}).join(' ');
+      if(!campos.includes(q))return false;
+    }
     return true;
   });
 }
