@@ -199,7 +199,7 @@ tr:hover td{background:var(--navy-700);}
   header{padding:8px 14px;}main{padding:14px 12px;}
   .form-grid{grid-template-columns:1fr;}.form-group.full{grid-column:1;}
   .stats-row,.dash-grid{grid-template-columns:1fr 1fr;}
-  th:nth-child(4),td:nth-child(4),th:nth-child(6),td:nth-child(6){display:none;}
+  th:nth-child(4),td:nth-child(4),th:nth-child(6),td:nth-child(6),th:nth-child(7),td:nth-child(7){display:none;}
   .user-chip{display:none;}
   nav button{padding:5px 8px;font-size:10px;}
 }
@@ -355,7 +355,8 @@ tr:hover td{background:var(--navy-700);}
         <div class="form-section">
           <div class="section-label">Detalle</div>
           <div class="form-grid">
-            <div class="form-group full"><label>¿Qué se pidió?</label><textarea id="descripcion" placeholder="Ej: Filtro de aire Stihl FS 55, parte 4140-141-0300"></textarea></div>
+            <div class="form-group full"><label>¿Qué se pidió?</label><textarea id="descripcion" placeholder="Ej: Filtro de aire Stihl FS 55"></textarea></div>
+            <div class="form-group"><label>Part Number (opcional)</label><input type="text" id="partnumber" placeholder="Ej: 4140-141-0300"></div>
             <div class="form-group full"><label>¿Por qué se pidió?</label><textarea id="razon" placeholder="Ej: Stock bajo. / Cliente trajo equipo para reparación." style="min-height:52px"></textarea></div>
           </div>
         </div>
@@ -406,7 +407,7 @@ tr:hover td{background:var(--navy-700);}
         <div id="totals-bar" style="background:var(--navy-700);border:1px solid var(--border-light);border-radius:var(--radius);padding:12px 18px;margin-bottom:16px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;"></div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Orden</th><th>Descripción</th><th>Tipo</th><th>Categoría</th><th>Costo</th><th>Tracking</th><th>Estado</th><th></th></tr></thead>
+            <thead><tr><th>Orden</th><th>Descripción</th><th>Part #</th><th>Tipo</th><th>Categoría</th><th>Costo</th><th>Dónde</th><th>Tracking</th><th>Estado</th><th></th></tr></thead>
             <tbody id="tabla-body"></tbody>
           </table>
           <div id="empty-state" class="empty-state" style="display:none"><div class="icon">📋</div><p>No hay órdenes registradas.</p></div>
@@ -441,6 +442,7 @@ tr:hover td{background:var(--navy-700);}
     <div class="modal-header"><h2>Editar Orden</h2></div>
     <div class="modal-body">
       <div class="form-group"><label>Descripción</label><textarea id="edit-descripcion" style="min-height:65px"></textarea></div>
+      <div class="form-group"><label>Part Number</label><input type="text" id="edit-partnumber" placeholder="Ej: 4140-141-0300"></div>
       <div class="form-group"><label>Razón</label><textarea id="edit-razon" style="min-height:48px"></textarea></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div class="form-group"><label>Categoría</label>
@@ -456,6 +458,16 @@ tr:hover td{background:var(--navy-700);}
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div class="form-group"><label>Suplidor</label><input type="text" id="edit-suplidor"></div>
+        <div class="form-group"><label>¿Dónde se compró?</label>
+          <select id="edit-donde">
+            <option value="">Seleccionar...</option>
+            <option>Amazon</option><option>eBay</option><option>Walmart</option>
+            <option>Home Depot</option><option>Ferretería Local</option>
+            <option>Llamada / Teléfono</option><option>Directamente al suplidor</option><option>Otro</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div class="form-group"><label>Estado</label><select id="edit-estado" onchange="toggleNotaField()"><option>Pendiente</option><option>Ordenado</option><option>Recibido</option></select></div>
       </div>
       <div class="form-group"><label>Tracking</label><input type="text" id="edit-tracking"></div>
@@ -673,6 +685,7 @@ window.guardarCompra=async function(){
       tipo:document.getElementById('tipo').value,
       cliente:document.getElementById('cliente').value.trim(),
       descripcion:desc,
+      partnumber:document.getElementById('partnumber').value.trim(),
       razon:document.getElementById('razon').value.trim(),
       categoria:document.getElementById('categoria').value,
       empleado:emp,
@@ -707,10 +720,12 @@ window.guardarEdicion=async function(){
   try{
     await updateDoc(doc(db,'compras',c.firebaseId),{
       descripcion:document.getElementById('edit-descripcion').value,
+      partnumber:document.getElementById('edit-partnumber').value,
       razon:document.getElementById('edit-razon').value,
       categoria:document.getElementById('edit-cat').value,
       costo:parseFloat(document.getElementById('edit-costo').value)||0,
       suplidor:document.getElementById('edit-suplidor').value,
+      donde:document.getElementById('edit-donde').value,
       estado:newEstado,
       tracking:document.getElementById('edit-tracking').value,
       notas:notasNuevas
@@ -773,7 +788,7 @@ window.selectTipo=function(tipo,btn){
 }
 
 function resetForm(){
-  ['descripcion','razon','cliente','suplidor','tracking'].forEach(function(id){document.getElementById(id).value='';});
+  ['descripcion','partnumber','razon','cliente','suplidor','tracking'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('costo').value='';document.getElementById('donde').value='';
   document.getElementById('categoria').value='';document.getElementById('estado').value='Pendiente';
   document.getElementById('fecha').value=new Date().toISOString().split('T')[0];
@@ -850,7 +865,7 @@ function filteredCompras(){
     if(estado&&normalizar(c.estado)!==normalizar(estado))return false;
     if(q){
       var campos=[
-        c.descripcion, c.empleado, c.suplidor, c.cliente,
+        c.descripcion, c.partnumber, c.empleado, c.suplidor, c.cliente,
         c.tracking, c.categoria, c.razon, c.donde,
         c.num ? 'ORD-'+String(c.num).padStart(4,'0') : ''
       ].map(function(v){return normalizar(v);}).join(' ');
@@ -886,9 +901,11 @@ window.renderHistorial = function renderHistorial(){
     var estadoClass=c.estado==='Recibido'?'badge-recibido':c.estado==='Ordenado'?'badge-ordenado':'badge-pendiente';
     return '<tr><td><div class="order-num">ORD-'+String(c.num||'?').padStart(4,'0')+'</div><div class="order-meta">'+fecha+'<br>'+c.empleado+'</div></td>'+
       '<td class="col-desc"><div class="main">'+(c.descripcion||'').substring(0,75)+((c.descripcion||'').length>75?'…':'')+'</div>'+(c.razon?'<div class="sub">'+c.razon.substring(0,55)+(c.razon.length>55?'…':'')+'</div>':'')+'</td>'+
+      '<td style="font-family:\'IBM Plex Mono\',monospace;font-size:12px;color:var(--text-secondary)">'+(c.partnumber||'—')+'</td>'+
       '<td><span class="badge badge-'+c.tipo+'">'+(c.tipo==='negocio'?'Negocio':'Cliente')+'</span></td>'+
       '<td style="color:var(--text-secondary);font-size:12px">'+(c.categoria||'—')+'</td>'+
       '<td class="price">'+(c.costo?'$'+c.costo.toFixed(2):'—')+'</td>'+
+      '<td style="color:var(--text-secondary);font-size:12px">'+(c.donde||'—')+'</td>'+
       '<td>'+(c.tracking?'<span class="tracking-chip">'+c.tracking.substring(0,14)+(c.tracking.length>14?'…':'')+'</span>':'—')+'</td>'+
       '<td><span class="badge '+estadoClass+'">'+c.estado+'</span></td>'+
       '<td><button class="action-btn" onclick="openModal('+idx+')">Editar</button></td></tr>';
@@ -975,10 +992,12 @@ window.toggleNotaField=function(){
 window.openModal=function(idx){
   editIndex=idx;var c=compras[idx];prevEstado=c.estado;
   document.getElementById('edit-descripcion').value=c.descripcion||'';
+  document.getElementById('edit-partnumber').value=c.partnumber||'';
   document.getElementById('edit-razon').value=c.razon||'';
   document.getElementById('edit-cat').value=c.categoria||'';
   document.getElementById('edit-costo').value=c.costo||'';
   document.getElementById('edit-suplidor').value=c.suplidor||'';
+  document.getElementById('edit-donde').value=c.donde||'';
   document.getElementById('edit-estado').value=c.estado||'Pendiente';
   document.getElementById('edit-tracking').value=c.tracking||'';
   document.getElementById('edit-nota').value='';
