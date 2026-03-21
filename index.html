@@ -376,6 +376,15 @@ tr:hover td{background:var(--navy-700);}
             <div class="form-group"><label>Costo Total ($)</label><input type="number" id="costo" placeholder="0.00" step="0.01" min="0"></div>
             <div class="form-group"><label>Fecha</label><input type="date" id="fecha"></div>
             <div class="form-group full"><label>Número de Tracking</label><input type="text" id="tracking" placeholder="Ej: 1Z999AA10123456784"></div>
+            <div class="form-group full">
+              <label>Foto / Recibo (opcional)</label>
+              <div id="foto-upload-area" style="border:2px dashed var(--border-light);border-radius:var(--radius);padding:20px;text-align:center;cursor:pointer;transition:all 0.15s;" onclick="document.getElementById('foto-input').click()" ondragover="event.preventDefault();this.style.borderColor='var(--gold)'" ondragleave="this.style.borderColor='var(--border-light)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-light)';handleFotoFiles(event.dataTransfer.files)">
+                <div style="font-size:24px;margin-bottom:6px;opacity:0.5">📷</div>
+                <div style="font-size:12px;color:var(--text-muted)">Toca para seleccionar o arrastra una imagen</div>
+              </div>
+              <input type="file" id="foto-input" accept="image/*" multiple style="display:none" onchange="handleFotoFiles(this.files)">
+              <div id="foto-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div>
+            </div>
           </div>
         </div>
         <div class="form-footer">
@@ -401,6 +410,7 @@ tr:hover td{background:var(--navy-700);}
             <select id="filtro-cat" onchange="renderHistorial()"><option value="">Todas las categorías</option></select>
             <select id="filtro-estado" onchange="renderHistorial()"><option value="">Todos los estados</option><option>Pendiente</option><option>Ordenado</option><option>Recibido</option></select>
             <input type="text" id="filtro-buscar" placeholder="🔍 Buscar..." oninput="renderHistorial()">
+            <button onclick="exportarExcel()" style="background:var(--navy-700);border:1px solid var(--border-light);color:var(--gold);padding:7px 14px;border-radius:var(--radius);font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all 0.15s;" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border-light)'">📥 Exportar Excel</button>
           </div>
         </div>
         <div class="stats-row" id="stats-row"></div>
@@ -471,6 +481,15 @@ tr:hover td{background:var(--navy-700);}
         <div class="form-group"><label>Estado</label><select id="edit-estado" onchange="toggleNotaField()"><option>Pendiente</option><option>Ordenado</option><option>Recibido</option></select></div>
       </div>
       <div class="form-group"><label>Tracking</label><input type="text" id="edit-tracking"></div>
+      <div class="form-group">
+        <label>Fotos / Recibos</label>
+        <div id="edit-fotos-existentes" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px"></div>
+        <div style="border:2px dashed var(--border-light);border-radius:var(--radius);padding:14px;text-align:center;cursor:pointer;transition:all 0.15s;" onclick="document.getElementById('edit-foto-input').click()" ondragover="event.preventDefault();this.style.borderColor='var(--gold)'" ondragleave="this.style.borderColor='var(--border-light)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-light)';handleEditFotoFiles(event.dataTransfer.files)">
+          <div style="font-size:12px;color:var(--text-muted)">📷 Añadir foto</div>
+        </div>
+        <input type="file" id="edit-foto-input" accept="image/*" multiple style="display:none" onchange="handleEditFotoFiles(this.files)">
+        <div id="edit-foto-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div>
+      </div>
       <div class="form-group" id="nota-field" style="display:none">
         <label>Nota al cambiar estado</label>
         <textarea id="edit-nota" placeholder="Ej: Llegó incompleto. / Llegó con daño." style="min-height:52px"></textarea>
@@ -489,6 +508,7 @@ tr:hover td{background:var(--navy-700);}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 const FB = {
   apiKey:"AIzaSyCqQ32JY-O39R7_9pMnTEahDXb8MiIGuKg",
@@ -500,6 +520,7 @@ const FB = {
 };
 const app = initializeApp(FB);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 const SESSION_KEY = 'agro_session_v3';
 const PROFILE_KEY = 'agro_profile_v3';
@@ -696,9 +717,15 @@ window.guardarCompra=async function(){
       tracking:document.getElementById('tracking').value.trim(),
       estado:document.getElementById('estado').value,
       notas:'',
+      fotos:[],
       creadoEn:new Date().toISOString()
     };
+    if(fotoFiles.length){
+      showLoading('Subiendo fotos...');
+      orden.fotos=await uploadFotos(fotoFiles,orden.num);
+    }
     await addDoc(collection(db,'compras'),orden);
+    fotoFiles=[];
     await loadData();
     resetForm();
     showToast('✓ Orden #'+orden.num+' guardada');
@@ -730,6 +757,20 @@ window.guardarEdicion=async function(){
       tracking:document.getElementById('edit-tracking').value,
       notas:notasNuevas
     });
+    // Eliminar fotos marcadas
+    for(var d=0;d<editFotosToDelete.length;d++){
+      try{var delRef=ref(storage,editFotosToDelete[d]);await deleteObject(delRef);}catch(e){}
+    }
+    var currentFotos=(c.fotos||[]).filter(function(u){return editFotosToDelete.indexOf(u)===-1;});
+    // Subir fotos nuevas
+    if(editFotoFiles.length){
+      showLoading('Subiendo fotos...');
+      var newUrls=await uploadFotos(editFotoFiles,c.num);
+      currentFotos=currentFotos.concat(newUrls);
+    }
+    await updateDoc(doc(db,'compras',c.firebaseId),{fotos:currentFotos});
+    editFotoFiles=[];
+    editFotosToDelete=[];
     await loadData();
     closeModalBtn();
     showToast('✓ Orden actualizada');
@@ -789,6 +830,7 @@ window.selectTipo=function(tipo,btn){
 
 function resetForm(){
   ['descripcion','partnumber','razon','cliente','suplidor','tracking'].forEach(function(id){document.getElementById(id).value='';});
+  fotoFiles=[];document.getElementById('foto-preview').innerHTML='';
   document.getElementById('costo').value='';document.getElementById('donde').value='';
   document.getElementById('categoria').value='';document.getElementById('estado').value='Pendiente';
   document.getElementById('fecha').value=new Date().toISOString().split('T')[0];
@@ -900,7 +942,7 @@ window.renderHistorial = function renderHistorial(){
     var fecha=c.fecha?new Date(c.fecha+'T12:00:00').toLocaleDateString('es',{day:'numeric',month:'short',year:'2-digit'}):'';
     var estadoClass=c.estado==='Recibido'?'badge-recibido':c.estado==='Ordenado'?'badge-ordenado':'badge-pendiente';
     return '<tr><td><div class="order-num">ORD-'+String(c.num||'?').padStart(4,'0')+'</div><div class="order-meta">'+fecha+'<br>'+c.empleado+'</div></td>'+
-      '<td class="col-desc"><div class="main">'+(c.descripcion||'').substring(0,75)+((c.descripcion||'').length>75?'…':'')+'</div>'+(c.razon?'<div class="sub">'+c.razon.substring(0,55)+(c.razon.length>55?'…':'')+'</div>':'')+'</td>'+
+      '<td class="col-desc"><div class="main">'+(c.fotos&&c.fotos.length?'<span style="margin-right:4px;cursor:pointer" title="'+c.fotos.length+' foto(s)" onclick="event.stopPropagation();openModal('+idx+')">📷</span>':'')+(c.descripcion||'').substring(0,75)+((c.descripcion||'').length>75?'…':'')+'</div>'+(c.razon?'<div class="sub">'+c.razon.substring(0,55)+(c.razon.length>55?'…':'')+'</div>':'')+'</td>'+
       '<td style="font-family:\'IBM Plex Mono\',monospace;font-size:12px;color:var(--text-secondary)">'+(c.partnumber||'—')+'</td>'+
       '<td><span class="badge badge-'+c.tipo+'">'+(c.tipo==='negocio'?'Negocio':'Cliente')+'</span></td>'+
       '<td style="color:var(--text-secondary);font-size:12px">'+(c.categoria||'—')+'</td>'+
@@ -1002,10 +1044,80 @@ window.openModal=function(idx){
   document.getElementById('edit-tracking').value=c.tracking||'';
   document.getElementById('edit-nota').value='';
   document.getElementById('nota-field').style.display='none';
+  editFotoFiles=[];
+  editFotosToDelete=[];
+  document.getElementById('edit-foto-preview').innerHTML='';
+  renderExistingFotos(c.fotos||[]);
   document.getElementById('modal-overlay').classList.add('open');
 }
 window.closeModalOutside=function(e){if(e.target===document.getElementById('modal-overlay'))closeModalBtn();}
-window.closeModalBtn=function(){document.getElementById('modal-overlay').classList.remove('open');editIndex=null;}
+window.closeModalBtn=function(){document.getElementById('modal-overlay').classList.remove('open');editIndex=null;editFotoFiles=[];}
+
+// ── FOTOS ──
+let fotoFiles=[];
+let editFotoFiles=[];
+let editFotosToDelete=[];
+
+function renderFotoPreview(files,containerId,listRef,isEdit){
+  var container=document.getElementById(containerId);
+  container.innerHTML='';
+  files.forEach(function(f,i){
+    var reader=new FileReader();
+    reader.onload=function(e){
+      var div=document.createElement('div');
+      div.style.cssText='position:relative;width:70px;height:70px;border-radius:4px;overflow:hidden;border:1px solid var(--border)';
+      div.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover">'+
+        '<button onclick="remove'+(isEdit?'Edit':'')+'FotoFile('+i+')" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.7);border:none;color:#fff;width:18px;height:18px;border-radius:50%;font-size:11px;cursor:pointer;line-height:18px;text-align:center">✕</button>';
+      container.appendChild(div);
+    };
+    reader.readAsDataURL(f);
+  });
+}
+
+window.handleFotoFiles=function(fileList){
+  for(var i=0;i<fileList.length;i++)fotoFiles.push(fileList[i]);
+  renderFotoPreview(fotoFiles,'foto-preview',fotoFiles,false);
+}
+window.removeFotoFile=function(i){fotoFiles.splice(i,1);renderFotoPreview(fotoFiles,'foto-preview',fotoFiles,false);}
+
+window.handleEditFotoFiles=function(fileList){
+  for(var i=0;i<fileList.length;i++)editFotoFiles.push(fileList[i]);
+  renderFotoPreview(editFotoFiles,'edit-foto-preview',editFotoFiles,true);
+}
+window.removeEditFotoFile=function(i){editFotoFiles.splice(i,1);renderFotoPreview(editFotoFiles,'edit-foto-preview',editFotoFiles,true);}
+
+window.deleteExistingFoto=function(url,el){
+  if(!confirm('¿Eliminar esta foto?'))return;
+  editFotosToDelete.push(url);
+  el.parentElement.remove();
+}
+
+function renderExistingFotos(fotos){
+  var container=document.getElementById('edit-fotos-existentes');
+  container.innerHTML='';
+  if(!fotos||!fotos.length){container.innerHTML='<div style="font-size:11px;color:var(--text-muted)">Sin fotos adjuntas</div>';return;}
+  fotos.forEach(function(url){
+    var div=document.createElement('div');
+    div.style.cssText='position:relative;width:70px;height:70px;border-radius:4px;overflow:hidden;border:1px solid var(--border);cursor:pointer';
+    div.innerHTML='<img src="'+url+'" style="width:100%;height:100%;object-fit:cover" onclick="window.open(\''+url+'\',\'_blank\')">'+
+      '<button onclick="deleteExistingFoto(\''+url+'\',this)" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.7);border:none;color:#fff;width:18px;height:18px;border-radius:50%;font-size:11px;cursor:pointer;line-height:18px;text-align:center">✕</button>';
+    container.appendChild(div);
+  });
+}
+
+async function uploadFotos(files,ordenNum){
+  var urls=[];
+  for(var i=0;i<files.length;i++){
+    var file=files[i];
+    var ext=file.name.split('.').pop();
+    var path='recibos/ORD-'+String(ordenNum).padStart(4,'0')+'/'+Date.now()+'_'+i+'.'+ext;
+    var storageRef=ref(storage,path);
+    await uploadBytes(storageRef,file);
+    var url=await getDownloadURL(storageRef);
+    urls.push(url);
+  }
+  return urls;
+}
 
 // ── BOOT ──
 async function boot(){
@@ -1032,7 +1144,38 @@ async function boot(){
   document.getElementById('screen-login').classList.remove('hidden');
 }
 
+window.exportarExcel=function(){
+  var data=filteredCompras();
+  if(!data.length){showToast('No hay órdenes para exportar.');return;}
+  var rows=data.slice().sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');}).map(function(c){
+    return {
+      'Orden':'ORD-'+String(c.num||'').padStart(4,'0'),
+      'Fecha':c.fecha||'',
+      'Empleado':c.empleado||'',
+      'Descripción':c.descripcion||'',
+      'Part Number':c.partnumber||'',
+      'Tipo':c.tipo==='negocio'?'Negocio':'Cliente',
+      'Cliente':c.cliente||'',
+      'Categoría':c.categoria||'',
+      'Suplidor':c.suplidor||'',
+      'Dónde':c.donde||'',
+      'Costo':c.costo||0,
+      'Tracking':c.tracking||'',
+      'Estado':c.estado||''
+    };
+  });
+  var ws=XLSX.utils.json_to_sheet(rows);
+  var colWidths=[{wch:10},{wch:12},{wch:16},{wch:35},{wch:18},{wch:10},{wch:18},{wch:16},{wch:20},{wch:18},{wch:10},{wch:22},{wch:12}];
+  ws['!cols']=colWidths;
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Órdenes');
+  var fecha=new Date().toISOString().split('T')[0];
+  XLSX.writeFile(wb,'AgroHorse_Ordenes_'+fecha+'.xlsx');
+  showToast('✓ Excel descargado');
+}
+
 boot();
 </script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 </body>
 </html>
