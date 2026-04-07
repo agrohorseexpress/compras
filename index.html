@@ -379,7 +379,7 @@ tr.row-urgente td:first-child{border-left:3px solid var(--warning);}
           <div class="section-label">Detalle</div>
           <div class="form-grid">
             <div class="form-group full"><label>¿Qué se pidió?</label><textarea id="descripcion" placeholder="Ej: Filtro de aire Stihl FS 55"></textarea></div>
-            <div class="form-group"><label>Part Number (opcional)</label><input type="text" id="partnumber" placeholder="Ej: 4140-141-0300"></div>
+            <div class="form-group" id="grupo-partnumber"><label>Part Number (opcional)</label><input type="text" id="partnumber" placeholder="Ej: 4140-141-0300"></div>
             <div class="form-group full"><label>¿Por qué se pidió?</label><textarea id="razon" placeholder="Ej: Stock bajo. / Cliente trajo equipo para reparación." style="min-height:52px"></textarea></div>
           </div>
         </div>
@@ -395,7 +395,6 @@ tr.row-urgente td:first-child{border-left:3px solid var(--warning);}
                 <option>Llamada / Teléfono</option><option>Directamente al suplidor</option><option>Otro</option>
               </select>
             </div>
-            <div class="form-group" id="grupo-suplidor-texto"><label>Suplidor / Proveedor</label><input type="text" id="suplidor" placeholder="Ej: Ferretería González"></div>
             <div class="form-group" id="grupo-suplidor-dropdown" style="display:none">
               <label>Suplidor</label>
               <select id="suplidor-dropdown" onchange="onSuplidorDropdownChange()">
@@ -434,6 +433,7 @@ tr.row-urgente td:first-child{border-left:3px solid var(--warning);}
       <div style="display:flex;margin-bottom:20px;border-bottom:1px solid var(--border);flex-wrap:wrap">
         <button id="htab-ordenes" onclick="switchHistorialTab('ordenes')" style="background:none;border:none;border-bottom:2px solid var(--gold);color:var(--gold);padding:10px 18px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;margin-bottom:-1px;">Órdenes Online</button>
         <button id="htab-facturas" onclick="switchHistorialTab('facturas')" style="background:none;border:none;border-bottom:2px solid transparent;color:var(--text-muted);padding:10px 18px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:500;letter-spacing:1px;text-transform:uppercase;cursor:pointer;margin-bottom:-1px;transition:all 0.15s;">Facturas Suplidores</button>
+        <button id="htab-todo" onclick="switchHistorialTab('todo')" style="background:none;border:none;border-bottom:2px solid transparent;color:var(--text-muted);padding:10px 18px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:500;letter-spacing:1px;text-transform:uppercase;cursor:pointer;margin-bottom:-1px;transition:all 0.15s;">Todo</button>
         <button id="htab-suplidores" onclick="switchHistorialTab('suplidores')" style="background:none;border:none;border-bottom:2px solid transparent;color:var(--text-muted);padding:10px 18px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:500;letter-spacing:1px;text-transform:uppercase;cursor:pointer;margin-bottom:-1px;transition:all 0.15s;">Suplidores</button>
       </div>
 
@@ -482,6 +482,26 @@ tr.row-urgente td:first-child{border-left:3px solid var(--warning);}
             <tbody id="facturas-body"></tbody>
           </table>
           <div id="facturas-empty" class="empty-state" style="display:none"><div class="icon">🧾</div><p>No hay facturas de suplidores registradas.</p></div>
+        </div>
+      </div>
+
+      <!-- TODO TAB (combined + category breakdown) -->
+      <div id="htab-content-todo" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+          <p style="color:var(--text-muted);font-size:13px;font-weight:300">Vista combinada — órdenes online y facturas de suplidores, desglosadas por categoría.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <select id="todo-filtro-mes" onchange="renderTodo()" style="background:var(--navy-800);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:7px 10px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;outline:none;"><option value="">Todos los meses</option></select>
+            <select id="todo-filtro-cat" onchange="renderTodo()" style="background:var(--navy-800);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:7px 10px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;outline:none;"><option value="">Todas las categorías</option></select>
+          </div>
+        </div>
+        <div class="stats-row" id="todo-stats-row"></div>
+        <div id="todo-cat-breakdown" style="background:var(--navy-800);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px"></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Orden</th><th>Descripción</th><th>Categoría</th><th>Tipo</th><th>Suplidor / Origen</th><th>Costo</th></tr></thead>
+            <tbody id="todo-body"></tbody>
+          </table>
+          <div id="todo-empty" class="empty-state" style="display:none"><div class="icon">📋</div><p>No hay órdenes para este filtro.</p></div>
         </div>
       </div>
 
@@ -626,8 +646,15 @@ function diasEntre(a,b){
   return Math.round((db-da)/(1000*60*60*24));
 }
 function hoyISO(){return new Date().toISOString().split('T')[0];}
-// Compatibilidad: compras viejas sin tipoCompra se tratan como 'online'
-function getTipoCompra(c){return c.tipoCompra||'online';}
+// Compatibilidad: compras viejas sin tipoCompra se infieren por 'donde' y 'suplidor'
+const ONLINE_SOURCES=['amazon','ebay','walmart','home depot'];
+function getTipoCompra(c){
+  if(c.tipoCompra)return c.tipoCompra;
+  var d=(c.donde||'').toLowerCase().trim();
+  if(ONLINE_SOURCES.indexOf(d)!==-1)return 'online';
+  if(c.suplidor && c.suplidor.trim())return 'suplidor';
+  return 'online';
+}
 // Estado efectivo de pago (calcula "Vencida" on-the-fly)
 function estadoPagoEfectivo(c){
   if(getTipoCompra(c)!=='suplidor')return null;
@@ -785,6 +812,42 @@ function showApp(name){
 }
 
 // ── FIREBASE COMPRAS ──
+let autoImportDone=false;
+async function autoImportSuplidoresDesdeCompras(){
+  if(autoImportDone)return;
+  autoImportDone=true;
+  var existing=new Set(suplidoresEntidades.map(function(s){return (s.nombre||'').trim().toLowerCase();}));
+  var nuevos={};
+  compras.forEach(function(c){
+    if(getTipoCompra(c)!=='suplidor')return;
+    var nombre=(c.suplidor||'').trim();
+    if(!nombre)return;
+    if(existing.has(nombre.toLowerCase()))return;
+    if(!nuevos[nombre.toLowerCase()])nuevos[nombre.toLowerCase()]=nombre;
+  });
+  var nombresNuevos=Object.values(nuevos);
+  if(!nombresNuevos.length)return;
+  console.log('Importando '+nombresNuevos.length+' suplidores desde órdenes existentes:',nombresNuevos);
+  for(var i=0;i<nombresNuevos.length;i++){
+    try{
+      await addDoc(collection(db,'suplidores'),{
+        nombre:nombresNuevos[i],
+        contacto:'',
+        notas:'Importado automáticamente desde órdenes existentes.',
+        creadoEn:new Date().toISOString()
+      });
+    }catch(e){console.error('No se pudo importar suplidor',nombresNuevos[i],e);}
+  }
+  // Re-cargar suplidores entidades
+  try{
+    var supSnap=await getDocs(collection(db,'suplidores'));
+    suplidoresEntidades=supSnap.docs.map(function(d){return Object.assign({},d.data(),{firebaseId:d.id});});
+    suplidoresEntidades.sort(function(a,b){return (a.nombre||'').localeCompare(b.nombre||'');});
+    refreshSuplidorDropdown();
+  }catch(e){}
+  showToast('✓ '+nombresNuevos.length+' suplidor(es) importado(s)');
+}
+
 async function loadData(showMsg){
   showLoading(showMsg?'Actualizando...':'Cargando órdenes...');
   try{
@@ -796,6 +859,7 @@ async function loadData(showMsg){
       suplidoresEntidades=supSnap.docs.map(d=>Object.assign({},d.data(),{firebaseId:d.id}));
       suplidoresEntidades.sort(function(a,b){return (a.nombre||'').localeCompare(b.nombre||'');});
     }catch(e){suplidoresEntidades=[];}
+    await autoImportSuplidoresDesdeCompras();
     renderDashboard();
     updateNavBadge();
     refreshSuplidorDropdown();
@@ -815,7 +879,7 @@ window.guardarCompra=async function(){
     const tipoCompra=document.getElementById('tipoCompra').value;
     const suplidorNombre=tipoCompra==='suplidor'
       ? document.getElementById('suplidor-dropdown').value
-      : document.getElementById('suplidor').value.trim();
+      : '';
     if(tipoCompra==='suplidor' && !suplidorNombre){alert('Selecciona un suplidor.');btn.disabled=false;btn.textContent='Registrar Orden de Compra';hideLoading();return;}
     const orden={
       num:compras.length+1,
@@ -938,14 +1002,16 @@ window.switchHistorialTab=function(tab){
   currentHistorialTab=tab;
   document.getElementById('htab-content-ordenes').style.display=tab==='ordenes'?'block':'none';
   document.getElementById('htab-content-facturas').style.display=tab==='facturas'?'block':'none';
+  document.getElementById('htab-content-todo').style.display=tab==='todo'?'block':'none';
   document.getElementById('htab-content-suplidores').style.display=tab==='suplidores'?'block':'none';
-  var btns={ordenes:document.getElementById('htab-ordenes'),facturas:document.getElementById('htab-facturas'),suplidores:document.getElementById('htab-suplidores')};
+  var btns={ordenes:document.getElementById('htab-ordenes'),facturas:document.getElementById('htab-facturas'),todo:document.getElementById('htab-todo'),suplidores:document.getElementById('htab-suplidores')};
   Object.keys(btns).forEach(function(k){
     var b=btns[k];
     if(k===tab){b.style.borderBottom='2px solid var(--gold)';b.style.color='var(--gold)';b.style.fontWeight='600';}
     else{b.style.borderBottom='2px solid transparent';b.style.color='var(--text-muted)';b.style.fontWeight='500';}
   });
   if(tab==='facturas'){buildFacturasFilters();window.renderFacturas();}
+  if(tab==='todo'){buildTodoFilters();window.renderTodo();}
   if(tab==='suplidores')window.renderSuplidoresEntidades();
   if(tab==='ordenes')window.renderHistorial();
 }
@@ -1192,6 +1258,77 @@ window.cambiarEstadoPago=async function(idx,nuevoEstado){
   finally{hideLoading();}
 }
 
+// ── TODO (vista combinada con desglose por categoría) ──
+function buildTodoFilters(){
+  var mes=document.getElementById('todo-filtro-mes');
+  if(!mes)return;
+  var curMes=mes.value;
+  var meses=compras.map(function(c){return c.fecha?c.fecha.substring(0,7):'';}).filter(function(x,i,a){return x&&a.indexOf(x)===i;}).sort().reverse();
+  mes.innerHTML='<option value="">Todos los meses</option>';
+  meses.forEach(function(m){var p=m.split('-');var label=new Date(p[0],p[1]-1).toLocaleDateString('es',{month:'long',year:'numeric'});mes.innerHTML+='<option value="'+m+'">'+label.charAt(0).toUpperCase()+label.slice(1)+'</option>';});
+  if(curMes)mes.value=curMes;
+  var cat=document.getElementById('todo-filtro-cat');
+  var curCat=cat.value;
+  cat.innerHTML='<option value="">Todas las categorías</option>';
+  CATS.forEach(function(c){cat.innerHTML+='<option>'+c+'</option>';});
+  if(curCat)cat.value=curCat;
+}
+
+window.renderTodo = function renderTodo(){
+  var mes=document.getElementById('todo-filtro-mes').value;
+  var cat=document.getElementById('todo-filtro-cat').value;
+  var data=compras.slice();
+  if(mes)data=data.filter(function(c){return (c.fecha||'').startsWith(mes);});
+  if(cat)data=data.filter(function(c){return c.categoria===cat;});
+  var total=data.reduce(function(s,c){return s+(c.costo||0);},0);
+  var totalOnline=data.filter(function(c){return getTipoCompra(c)==='online';}).reduce(function(s,c){return s+(c.costo||0);},0);
+  var totalSup=data.filter(function(c){return getTipoCompra(c)==='suplidor';}).reduce(function(s,c){return s+(c.costo||0);},0);
+  document.getElementById('todo-stats-row').innerHTML=
+    '<div class="stat-card"><div class="s-label">Total</div><div class="s-value">$'+total.toFixed(2)+'</div></div>'+
+    '<div class="stat-card"><div class="s-label">Órdenes Online</div><div class="s-value white">$'+totalOnline.toFixed(2)+'</div></div>'+
+    '<div class="stat-card"><div class="s-label">Facturas Suplidores</div><div class="s-value blue">$'+totalSup.toFixed(2)+'</div></div>'+
+    '<div class="stat-card"><div class="s-label">Órdenes</div><div class="s-value warn">'+data.length+'</div></div>';
+  // Desglose por categoría
+  var catTotals=CATS.map(function(c){return {cat:c,total:data.filter(function(x){return x.categoria===c;}).reduce(function(s,x){return s+(x.costo||0);},0),count:data.filter(function(x){return x.categoria===c;}).length};});
+  var sinCat={cat:'Sin categoría',total:data.filter(function(x){return !x.categoria;}).reduce(function(s,x){return s+(x.costo||0);},0),count:data.filter(function(x){return !x.categoria;}).length};
+  if(sinCat.total>0)catTotals.push(sinCat);
+  catTotals=catTotals.filter(function(x){return x.total>0;}).sort(function(a,b){return b.total-a.total;});
+  var maxCat=catTotals.length?catTotals[0].total:1;
+  var breakdownHTML='<div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold);margin-bottom:12px">Desglose por Categoría'+(cat?' · '+cat:'')+'</div>';
+  if(!catTotals.length){
+    breakdownHTML+='<div style="color:var(--text-muted);font-size:12px;text-align:center;padding:6px">Sin datos para el filtro actual</div>';
+  }else{
+    breakdownHTML+=catTotals.map(function(x){
+      var pct=Math.round(x.total/maxCat*100);
+      var pctTotal=total>0?Math.round(x.total/total*100):0;
+      return '<div class="cat-row"><span class="cat-name">'+x.cat+'</span><div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:'+pct+'%"></div></div><span style="font-size:11px;color:var(--text-muted);margin-right:8px">'+x.count+' ord · '+pctTotal+'%</span><span class="cat-amt">$'+x.total.toFixed(2)+'</span></div>';
+    }).join('');
+  }
+  document.getElementById('todo-cat-breakdown').innerHTML=breakdownHTML;
+  // Tabla
+  var body=document.getElementById('todo-body'),empty=document.getElementById('todo-empty');
+  if(!data.length){body.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  var sorted=data.slice().sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');});
+  body.innerHTML=sorted.map(function(c){
+    var idx=compras.indexOf(c);
+    var fecha=c.fecha?new Date(c.fecha+'T12:00:00').toLocaleDateString('es',{day:'numeric',month:'short',year:'2-digit'}):'';
+    var tc=getTipoCompra(c);
+    var tipoBadge=tc==='suplidor'
+      ? '<span class="badge badge-ordenado">🧾 Suplidor</span>'
+      : '<span class="badge badge-negocio">🛒 Online</span>';
+    var origen=tc==='suplidor'?(c.suplidor||'—'):(c.donde||c.suplidor||'—');
+    return '<tr onclick="openModal('+idx+')" style="cursor:pointer">'+
+      '<td><div class="order-num">ORD-'+String(c.num||'?').padStart(4,'0')+'</div><div class="order-meta">'+fecha+'</div></td>'+
+      '<td class="col-desc"><div class="main">'+(c.descripcion||'').substring(0,70)+((c.descripcion||'').length>70?'…':'')+'</div></td>'+
+      '<td style="color:var(--text-secondary);font-size:12px">'+(c.categoria||'—')+'</td>'+
+      '<td>'+tipoBadge+'</td>'+
+      '<td style="color:var(--text-secondary);font-size:12px">'+origen+'</td>'+
+      '<td class="price">'+(c.costo?'$'+c.costo.toFixed(2):'—')+'</td>'+
+      '</tr>';
+  }).join('');
+}
+
 // ── SUPLIDORES ENTIDADES (CRUD) ──
 window.renderSuplidoresEntidades = function renderSuplidoresEntidades(){
   var container=document.getElementById('suplidores-entidades-content');
@@ -1305,7 +1442,6 @@ window.selectTipoCompra=function(tipo,btn){
   document.getElementById('tc-suplidor-btn').className='tipo-btn'+(tipo==='suplidor'?' sel-negocio':'');
   var isSup=tipo==='suplidor';
   document.getElementById('grupo-donde').style.display=isSup?'none':'flex';
-  document.getElementById('grupo-suplidor-texto').style.display=isSup?'none':'flex';
   document.getElementById('grupo-suplidor-dropdown').style.display=isSup?'flex':'none';
   document.getElementById('grupo-invoice').style.display=isSup?'flex':'none';
   document.getElementById('grupo-fecha').style.display=isSup?'none':'flex';
@@ -1313,6 +1449,7 @@ window.selectTipoCompra=function(tipo,btn){
   document.getElementById('grupo-fecha-pago').style.display=isSup?'flex':'none';
   document.getElementById('grupo-estado-pago').style.display=isSup?'flex':'none';
   document.getElementById('grupo-tracking').style.display=isSup?'none':'flex';
+  document.getElementById('grupo-partnumber').style.display=isSup?'none':'flex';
   if(isSup){
     if(!document.getElementById('fechaFactura').value)document.getElementById('fechaFactura').value=hoyISO();
     refreshSuplidorDropdown();
