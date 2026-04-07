@@ -148,6 +148,15 @@ tr:hover td{background:var(--navy-700);}
 .badge-recibido{background:rgba(76,175,130,0.12);color:var(--success);border:1px solid rgba(76,175,130,0.25);}
 .badge-pendiente{background:rgba(212,160,64,0.12);color:var(--warning);border:1px solid rgba(212,160,64,0.25);}
 .badge-ordenado{background:rgba(80,144,208,0.12);color:#90c0f0;border:1px solid rgba(80,144,208,0.25);}
+.badge-pagada{background:rgba(76,175,130,0.12);color:var(--success);border:1px solid rgba(76,175,130,0.25);}
+.badge-vencida{background:rgba(192,80,80,0.18);color:#e08080;border:1px solid rgba(192,80,80,0.4);}
+tr.row-vencida td{background:rgba(192,80,80,0.08) !important;}
+tr.row-vencida td:first-child{border-left:3px solid var(--danger);}
+tr.row-urgente td{background:rgba(212,160,64,0.06) !important;}
+tr.row-urgente td:first-child{border-left:3px solid var(--warning);}
+.inline-estado{background:var(--navy-700);border:1px solid var(--border-light);color:var(--text);padding:5px 8px;border-radius:var(--radius);font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:500;cursor:pointer;outline:none;}
+.dash-card.payable::before{background:var(--danger);opacity:0.8;}
+.dc-value.red{color:#e08080;}
 .price{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text);white-space:nowrap;}
 .tracking-chip{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);background:var(--navy-700);padding:2px 6px;border-radius:3px;border:1px solid var(--border);}
 .action-btn{background:none;border:1px solid var(--border);color:var(--text-muted);padding:4px 9px;border-radius:var(--radius);font-size:11px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;font-weight:500;letter-spacing:0.5px;text-transform:uppercase;transition:all 0.15s;}
@@ -322,6 +331,20 @@ tr:hover td{background:var(--navy-700);}
       <div class="page-header"><div><h1>Nueva Orden de Compra</h1><p>Registra todos los detalles para mantener un historial claro.</p></div></div>
       <div class="form-card">
         <div class="form-section">
+          <div class="section-label">Tipo de Compra</div>
+          <div class="form-grid">
+            <div class="form-group full">
+              <label>¿Cómo se hizo esta compra?</label>
+              <div class="tipo-group">
+                <button class="tipo-btn sel-negocio" onclick="selectTipoCompra('online',this)" id="tc-online-btn">🛒 Orden Online (Amazon/eBay/etc.)</button>
+                <button class="tipo-btn" onclick="selectTipoCompra('suplidor',this)" id="tc-suplidor-btn">🧾 Factura de Suplidor</button>
+              </div>
+              <input type="hidden" id="tipoCompra" value="online">
+              <div style="font-size:11px;color:var(--text-muted);margin-top:6px;line-height:1.5">Las facturas de suplidor llevan invoice number y fecha de pago. Las órdenes online se pagan en el momento.</div>
+            </div>
+          </div>
+        </div>
+        <div class="form-section">
           <div class="section-label">Clasificación</div>
           <div class="form-grid">
             <div class="form-group full">
@@ -363,8 +386,7 @@ tr:hover td{background:var(--navy-700);}
         <div class="form-section">
           <div class="section-label">Proveedor y Costo</div>
           <div class="form-grid">
-            <div class="form-group"><label>Suplidor / Proveedor</label><input type="text" id="suplidor" placeholder="Ej: Ferretería González"></div>
-            <div class="form-group">
+            <div class="form-group" id="grupo-donde">
               <label>¿Dónde se compró?</label>
               <select id="donde">
                 <option value="">Seleccionar...</option>
@@ -373,9 +395,23 @@ tr:hover td{background:var(--navy-700);}
                 <option>Llamada / Teléfono</option><option>Directamente al suplidor</option><option>Otro</option>
               </select>
             </div>
+            <div class="form-group" id="grupo-suplidor-texto"><label>Suplidor / Proveedor</label><input type="text" id="suplidor" placeholder="Ej: Ferretería González"></div>
+            <div class="form-group" id="grupo-suplidor-dropdown" style="display:none">
+              <label>Suplidor</label>
+              <select id="suplidor-dropdown" onchange="onSuplidorDropdownChange()">
+                <option value="">Seleccionar suplidor...</option>
+              </select>
+            </div>
+            <div class="form-group" id="grupo-invoice" style="display:none"><label>Invoice Number</label><input type="text" id="invoiceNumber" placeholder="Ej: INV-00523"></div>
             <div class="form-group"><label>Costo Total ($)</label><input type="number" id="costo" placeholder="0.00" step="0.01" min="0"></div>
-            <div class="form-group"><label>Fecha</label><input type="date" id="fecha"></div>
-            <div class="form-group full"><label>Número de Tracking</label><input type="text" id="tracking" placeholder="Ej: 1Z999AA10123456784"></div>
+            <div class="form-group" id="grupo-fecha"><label>Fecha</label><input type="date" id="fecha"></div>
+            <div class="form-group" id="grupo-fecha-factura" style="display:none"><label>Fecha de Factura</label><input type="date" id="fechaFactura"></div>
+            <div class="form-group" id="grupo-fecha-pago" style="display:none"><label>Fecha Límite de Pago</label><input type="date" id="fechaPago"></div>
+            <div class="form-group" id="grupo-estado-pago" style="display:none">
+              <label>Estado de Pago</label>
+              <select id="estadoPago"><option>Pendiente</option><option>Pagada</option></select>
+            </div>
+            <div class="form-group full" id="grupo-tracking"><label>Número de Tracking</label><input type="text" id="tracking" placeholder="Ej: 1Z999AA10123456784"></div>
             <div class="form-group full">
               <label>Foto / Recibo (opcional)</label>
               <div id="foto-upload-area" style="border:2px dashed var(--border-light);border-radius:var(--radius);padding:20px;text-align:center;cursor:pointer;transition:all 0.15s;" onclick="document.getElementById('foto-input').click()" ondragover="event.preventDefault();this.style.borderColor='var(--gold)'" ondragleave="this.style.borderColor='var(--border-light)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-light)';handleFotoFiles(event.dataTransfer.files)">
@@ -395,8 +431,9 @@ tr:hover td{background:var(--navy-700);}
 
     <!-- HISTORIAL + SUPLIDORES -->
     <div id="view-historial" class="view">
-      <div style="display:flex;margin-bottom:20px;border-bottom:1px solid var(--border);">
-        <button id="htab-ordenes" onclick="switchHistorialTab('ordenes')" style="background:none;border:none;border-bottom:2px solid var(--gold);color:var(--gold);padding:10px 18px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;margin-bottom:-1px;">Órdenes</button>
+      <div style="display:flex;margin-bottom:20px;border-bottom:1px solid var(--border);flex-wrap:wrap">
+        <button id="htab-ordenes" onclick="switchHistorialTab('ordenes')" style="background:none;border:none;border-bottom:2px solid var(--gold);color:var(--gold);padding:10px 18px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;margin-bottom:-1px;">Órdenes Online</button>
+        <button id="htab-facturas" onclick="switchHistorialTab('facturas')" style="background:none;border:none;border-bottom:2px solid transparent;color:var(--text-muted);padding:10px 18px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:500;letter-spacing:1px;text-transform:uppercase;cursor:pointer;margin-bottom:-1px;transition:all 0.15s;">Facturas Suplidores</button>
         <button id="htab-suplidores" onclick="switchHistorialTab('suplidores')" style="background:none;border:none;border-bottom:2px solid transparent;color:var(--text-muted);padding:10px 18px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:500;letter-spacing:1px;text-transform:uppercase;cursor:pointer;margin-bottom:-1px;transition:all 0.15s;">Suplidores</button>
       </div>
 
@@ -424,17 +461,37 @@ tr:hover td{background:var(--navy-700);}
         </div>
       </div>
 
-      <!-- SUPLIDORES TAB -->
-      <div id="htab-content-suplidores" style="display:none">
+      <!-- FACTURAS SUPLIDORES TAB -->
+      <div id="htab-content-facturas" style="display:none">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
-          <p style="color:var(--text-muted);font-size:13px;font-weight:300">Gastos totales agrupados por suplidor.</p>
-          <div style="display:flex;gap:8px;">
-            <select id="sup-filtro-mes" onchange="renderSuplidores()" style="background:var(--navy-800);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:7px 10px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;outline:none;"><option value="">Todos los meses</option></select>
-            <select id="sup-filtro-cat" onchange="renderSuplidores()" style="background:var(--navy-800);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:7px 10px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;outline:none;"><option value="">Todas las categorías</option></select>
+          <p style="color:var(--text-muted);font-size:13px;font-weight:300">Cuentas por pagar — facturas de suplidores con fecha de vencimiento.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <select id="fact-filtro-sup" onchange="renderFacturas()" style="background:var(--navy-800);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:7px 10px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;outline:none;"><option value="">Todos los suplidores</option></select>
+            <select id="fact-filtro-estado" onchange="renderFacturas()" style="background:var(--navy-800);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:7px 10px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;outline:none;">
+              <option value="">Todos los estados</option>
+              <option value="Pendiente">Pendiente</option>
+              <option value="Pagada">Pagada</option>
+              <option value="Vencida">Vencida</option>
+            </select>
           </div>
         </div>
-        <div class="stats-row" id="sup-stats-row"></div>
-        <div id="suplidores-content"></div>
+        <div class="stats-row" id="fact-stats-row"></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Suplidor</th><th>Invoice</th><th>Fecha Factura</th><th>Vence</th><th>Descripción</th><th>Monto</th><th>Estado Pago</th><th></th></tr></thead>
+            <tbody id="facturas-body"></tbody>
+          </table>
+          <div id="facturas-empty" class="empty-state" style="display:none"><div class="icon">🧾</div><p>No hay facturas de suplidores registradas.</p></div>
+        </div>
+      </div>
+
+      <!-- SUPLIDORES TAB (entidades) -->
+      <div id="htab-content-suplidores" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+          <p style="color:var(--text-muted);font-size:13px;font-weight:300">Lista de suplidores con su contacto y notas.</p>
+          <button onclick="openSuplidorModal(null)" style="background:var(--gold);border:none;color:var(--navy-900);padding:8px 16px;border-radius:var(--radius);font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:1px;text-transform:uppercase;">+ Nuevo Suplidor</button>
+        </div>
+        <div id="suplidores-entidades-content"></div>
       </div>
     </div>
 
@@ -444,6 +501,23 @@ tr:hover td{background:var(--navy-700);}
       <div id="resumen-content"></div>
     </div>
   </main>
+</div>
+
+<!-- MODAL SUPLIDOR (entidad) -->
+<div class="modal-overlay" id="modal-sup-overlay" onclick="closeSupModalOutside(event)">
+  <div class="modal">
+    <div class="modal-header"><h2 id="modal-sup-title">Nuevo Suplidor</h2></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Nombre</label><input type="text" id="sup-nombre" placeholder="Ej: Tractor Supply"></div>
+      <div class="form-group"><label>Contacto (opcional)</label><input type="text" id="sup-contacto" placeholder="Teléfono, email, persona"></div>
+      <div class="form-group"><label>Notas (opcional)</label><textarea id="sup-notas" placeholder="Ej: Normalmente da 30 días de crédito" style="min-height:60px"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-delete" id="sup-btn-delete" onclick="eliminarSuplidor()" style="display:none">Eliminar</button>
+      <button class="btn-cancel" onclick="closeSupModal()">Cancelar</button>
+      <button class="btn-save" onclick="guardarSuplidor()">Guardar</button>
+    </div>
+  </div>
 </div>
 
 <!-- MODAL EDITAR -->
@@ -479,6 +553,17 @@ tr:hover td{background:var(--navy-700);}
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div class="form-group"><label>Estado</label><select id="edit-estado" onchange="toggleNotaField()"><option>Pendiente</option><option>Ordenado</option><option>Recibido</option></select></div>
+      </div>
+      <div id="edit-factura-fields" style="display:none;border-top:1px dashed var(--border);padding-top:12px;margin-top:4px">
+        <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold);margin-bottom:8px">Datos de Factura</div>
+        <div class="form-group"><label>Invoice Number</label><input type="text" id="edit-invoiceNumber" placeholder="Ej: INV-00523"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px">
+          <div class="form-group"><label>Fecha Factura</label><input type="date" id="edit-fechaFactura"></div>
+          <div class="form-group"><label>Fecha Límite Pago</label><input type="date" id="edit-fechaPago"></div>
+        </div>
+        <div class="form-group" style="margin-top:10px"><label>Estado de Pago</label>
+          <select id="edit-estadoPago"><option>Pendiente</option><option>Pagada</option></select>
+        </div>
       </div>
       <div class="form-group"><label>Tracking</label><input type="text" id="edit-tracking"></div>
       <div class="form-group">
@@ -528,8 +613,28 @@ const VIEW_KEY = 'agro_view_v3';
 const CATS = ['Piezas','Alimentos y Vitaminas','Equipo','Otro'];
 
 let compras = [];
+let suplidoresEntidades = [];
 let editIndex = null;
+let editSupId = null;
 let prevEstado = null;
+let currentHistorialTab = 'ordenes';
+
+// Helper: días entre dos fechas YYYY-MM-DD (b - a, negativo si b < a)
+function diasEntre(a,b){
+  if(!a||!b)return null;
+  var da=new Date(a+'T12:00:00'),db=new Date(b+'T12:00:00');
+  return Math.round((db-da)/(1000*60*60*24));
+}
+function hoyISO(){return new Date().toISOString().split('T')[0];}
+// Compatibilidad: compras viejas sin tipoCompra se tratan como 'online'
+function getTipoCompra(c){return c.tipoCompra||'online';}
+// Estado efectivo de pago (calcula "Vencida" on-the-fly)
+function estadoPagoEfectivo(c){
+  if(getTipoCompra(c)!=='suplidor')return null;
+  if(c.estadoPago==='Pagada')return 'Pagada';
+  if(c.fechaPago && c.fechaPago<hoyISO())return 'Vencida';
+  return 'Pendiente';
+}
 
 // ── UTILS ──
 function showLoading(msg){document.getElementById('loading-text').textContent=msg||'Cargando...';document.getElementById('loading-overlay').classList.remove('hidden');}
@@ -686,8 +791,14 @@ async function loadData(showMsg){
     const q=query(collection(db,'compras'),orderBy('num','asc'));
     const snap=await getDocs(q);
     compras=snap.docs.map(d=>Object.assign({},d.data(),{firebaseId:d.id}));
+    try{
+      const supSnap=await getDocs(collection(db,'suplidores'));
+      suplidoresEntidades=supSnap.docs.map(d=>Object.assign({},d.data(),{firebaseId:d.id}));
+      suplidoresEntidades.sort(function(a,b){return (a.nombre||'').localeCompare(b.nombre||'');});
+    }catch(e){suplidoresEntidades=[];}
     renderDashboard();
     updateNavBadge();
+    refreshSuplidorDropdown();
     if(showMsg)showToast('✓ Datos actualizados');
   }catch(e){showToast('Error al cargar datos.');console.error(e);}
   finally{hideLoading();}
@@ -701,8 +812,14 @@ window.guardarCompra=async function(){
   btn.disabled=true;btn.textContent='Guardando...';
   showLoading('Guardando orden...');
   try{
+    const tipoCompra=document.getElementById('tipoCompra').value;
+    const suplidorNombre=tipoCompra==='suplidor'
+      ? document.getElementById('suplidor-dropdown').value
+      : document.getElementById('suplidor').value.trim();
+    if(tipoCompra==='suplidor' && !suplidorNombre){alert('Selecciona un suplidor.');btn.disabled=false;btn.textContent='Registrar Orden de Compra';hideLoading();return;}
     const orden={
       num:compras.length+1,
+      tipoCompra:tipoCompra,
       tipo:document.getElementById('tipo').value,
       cliente:document.getElementById('cliente').value.trim(),
       descripcion:desc,
@@ -710,12 +827,16 @@ window.guardarCompra=async function(){
       razon:document.getElementById('razon').value.trim(),
       categoria:document.getElementById('categoria').value,
       empleado:emp,
-      fecha:document.getElementById('fecha').value,
-      suplidor:document.getElementById('suplidor').value.trim(),
-      donde:document.getElementById('donde').value,
+      fecha:tipoCompra==='suplidor' ? (document.getElementById('fechaFactura').value||hoyISO()) : document.getElementById('fecha').value,
+      suplidor:suplidorNombre,
+      donde:tipoCompra==='suplidor' ? 'Directamente al suplidor' : document.getElementById('donde').value,
       costo:parseFloat(document.getElementById('costo').value)||0,
       tracking:document.getElementById('tracking').value.trim(),
       estado:document.getElementById('estado').value,
+      invoiceNumber:tipoCompra==='suplidor' ? document.getElementById('invoiceNumber').value.trim() : '',
+      fechaFactura:tipoCompra==='suplidor' ? document.getElementById('fechaFactura').value : '',
+      fechaPago:tipoCompra==='suplidor' ? document.getElementById('fechaPago').value : '',
+      estadoPago:tipoCompra==='suplidor' ? document.getElementById('estadoPago').value : '',
       notas:'',
       fotos:[],
       creadoEn:new Date().toISOString()
@@ -745,7 +866,7 @@ window.guardarEdicion=async function(){
   const notasActuales=c.notas||'';
   const notasNuevas=nota?(notasActuales?notasActuales+'\n---\n'+newEstado+': '+nota:newEstado+': '+nota):notasActuales;
   try{
-    await updateDoc(doc(db,'compras',c.firebaseId),{
+    var updatePayload={
       descripcion:document.getElementById('edit-descripcion').value,
       partnumber:document.getElementById('edit-partnumber').value,
       razon:document.getElementById('edit-razon').value,
@@ -756,7 +877,14 @@ window.guardarEdicion=async function(){
       estado:newEstado,
       tracking:document.getElementById('edit-tracking').value,
       notas:notasNuevas
-    });
+    };
+    if(getTipoCompra(c)==='suplidor'){
+      updatePayload.invoiceNumber=document.getElementById('edit-invoiceNumber').value.trim();
+      updatePayload.fechaFactura=document.getElementById('edit-fechaFactura').value;
+      updatePayload.fechaPago=document.getElementById('edit-fechaPago').value;
+      updatePayload.estadoPago=document.getElementById('edit-estadoPago').value;
+    }
+    await updateDoc(doc(db,'compras',c.firebaseId),updatePayload);
     // Eliminar fotos marcadas
     for(var d=0;d<editFotosToDelete.length;d++){
       try{var delRef=ref(storage,editFotosToDelete[d]);await deleteObject(delRef);}catch(e){}
@@ -801,43 +929,56 @@ window.showView=function(v,btn){
   if(btn)btn.classList.add('active');
   else{var nb=document.querySelector('nav button[onclick*="\''+v+'\'"]');if(nb)nb.classList.add('active');}
   localStorage.setItem(VIEW_KEY,v);
-  if(v==='historial'){buildFilters();buildSupFilters();renderHistorial();}
+  if(v==='historial'){buildFilters();buildFacturasFilters();renderHistorial();}
   if(v==='dashboard')renderDashboard();
   if(v==='resumen')renderResumen();
 }
 
 window.switchHistorialTab=function(tab){
+  currentHistorialTab=tab;
   document.getElementById('htab-content-ordenes').style.display=tab==='ordenes'?'block':'none';
+  document.getElementById('htab-content-facturas').style.display=tab==='facturas'?'block':'none';
   document.getElementById('htab-content-suplidores').style.display=tab==='suplidores'?'block':'none';
-  var oBtn=document.getElementById('htab-ordenes');
-  var sBtn=document.getElementById('htab-suplidores');
-  if(tab==='ordenes'){
-    oBtn.style.borderBottom='2px solid var(--gold)';oBtn.style.color='var(--gold)';oBtn.style.fontWeight='600';
-    sBtn.style.borderBottom='2px solid transparent';sBtn.style.color='var(--text-muted)';sBtn.style.fontWeight='500';
-  }else{
-    sBtn.style.borderBottom='2px solid var(--gold)';sBtn.style.color='var(--gold)';sBtn.style.fontWeight='600';
-    oBtn.style.borderBottom='2px solid transparent';oBtn.style.color='var(--text-muted)';oBtn.style.fontWeight='500';
-    renderSuplidores();
-  }
+  var btns={ordenes:document.getElementById('htab-ordenes'),facturas:document.getElementById('htab-facturas'),suplidores:document.getElementById('htab-suplidores')};
+  Object.keys(btns).forEach(function(k){
+    var b=btns[k];
+    if(k===tab){b.style.borderBottom='2px solid var(--gold)';b.style.color='var(--gold)';b.style.fontWeight='600';}
+    else{b.style.borderBottom='2px solid transparent';b.style.color='var(--text-muted)';b.style.fontWeight='500';}
+  });
+  if(tab==='facturas'){buildFacturasFilters();window.renderFacturas();}
+  if(tab==='suplidores')window.renderSuplidoresEntidades();
+  if(tab==='ordenes')window.renderHistorial();
 }
 
 window.selectTipo=function(tipo,btn){
   document.getElementById('tipo').value=tipo;
-  document.querySelectorAll('.tipo-btn').forEach(function(b){b.className='tipo-btn';});
+  // Solo resetea los botones del grupo de Clasificación (no los de Tipo de Compra)
+  btn.parentElement.querySelectorAll('.tipo-btn').forEach(function(b){b.className='tipo-btn';});
   btn.className='tipo-btn sel-'+tipo;
   document.getElementById('grupo-cliente').style.display=tipo==='cliente'?'flex':'none';
 }
 
 function resetForm(){
-  ['descripcion','partnumber','razon','cliente','suplidor','tracking'].forEach(function(id){document.getElementById(id).value='';});
+  ['descripcion','partnumber','razon','cliente','suplidor','tracking','invoiceNumber','fechaFactura','fechaPago'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});
   fotoFiles=[];document.getElementById('foto-preview').innerHTML='';
   document.getElementById('costo').value='';document.getElementById('donde').value='';
   document.getElementById('categoria').value='';document.getElementById('estado').value='Pendiente';
+  var epEl=document.getElementById('estadoPago');if(epEl)epEl.value='Pendiente';
+  var sdd=document.getElementById('suplidor-dropdown');if(sdd)sdd.value='';
   document.getElementById('fecha').value=new Date().toISOString().split('T')[0];
   document.getElementById('tipo').value='negocio';
-  document.querySelectorAll('.tipo-btn').forEach(function(b){b.className='tipo-btn';});
-  document.querySelector('.tipo-btn').className='tipo-btn sel-negocio';
+  document.getElementById('tipoCompra').value='online';
+  // Resetear botones tipo (negocio/cliente)
+  var clasifBtns=document.querySelectorAll('#view-nueva .tipo-btn');
+  clasifBtns.forEach(function(b){b.className='tipo-btn';});
+  // tc-online-btn es el primer .tipo-btn del form (en Tipo de Compra)
+  document.getElementById('tc-online-btn').className='tipo-btn sel-negocio';
+  document.getElementById('tc-suplidor-btn').className='tipo-btn';
+  // Para el segundo grupo (Clasificación: negocio/cliente), re-seleccionar negocio
+  var negocioBtn=document.querySelector('#view-nueva .tipo-btn[onclick*="negocio"]');
+  if(negocioBtn)negocioBtn.className='tipo-btn sel-negocio';
   document.getElementById('grupo-cliente').style.display='none';
+  window.selectTipoCompra('online');
 }
 
 function updateNavBadge(){
@@ -845,6 +986,11 @@ function updateNavBadge(){
   var btn=document.getElementById('nav-historial');
   var old=btn.querySelector('.nav-badge');if(old)old.remove();
   if(pending>0)btn.insertAdjacentHTML('beforeend','<span class="nav-badge">'+pending+'</span>');
+}
+
+window.irAFacturas=function(){
+  showView('historial');
+  setTimeout(function(){switchHistorialTab('facturas');},50);
 }
 
 // ── DASHBOARD ──
@@ -859,11 +1005,20 @@ function renderDashboard(){
   var totalMes=delMes.reduce(function(s,c){return s+(c.costo||0);},0);
   var pendientes=compras.filter(function(c){return c.estado==='Pendiente';});
   var enCamino=compras.filter(function(c){return c.estado==='Ordenado';});
+  // Cuentas por pagar
+  var facturas=compras.filter(function(c){return getTipoCompra(c)==='suplidor';});
+  var porPagar=facturas.filter(function(c){return estadoPagoEfectivo(c)!=='Pagada';});
+  var totalPorPagar=porPagar.reduce(function(s,c){return s+(c.costo||0);},0);
+  var vencidasCount=porPagar.filter(function(c){return estadoPagoEfectivo(c)==='Vencida';}).length;
+  var proxCount=porPagar.filter(function(c){var d=diasEntre(hoyISO(),c.fechaPago);return d!==null&&d>=0&&d<=7;}).length;
+  var cppSub=vencidasCount>0?(vencidasCount+' vencida'+(vencidasCount>1?'s':'')):(proxCount>0?(proxCount+' próx. 7d'):(porPagar.length+' pendientes'));
+  var cppClass=vencidasCount>0?'payable':(proxCount>0?'alert':'');
+  var cppValClass=vencidasCount>0?'red':(proxCount>0?'warn':'warn');
   document.getElementById('dash-stats').innerHTML=
     '<div class="dash-card"><div class="dc-label">Gasto Este Mes</div><div class="dc-value">$'+totalMes.toFixed(2)+'</div><div class="dc-sub">'+delMes.length+' órdenes</div></div>'+
-    '<div class="dash-card '+(pendientes.length>0?'alert':'')+'"><div class="dc-label">Pendientes</div><div class="dc-value warn">'+pendientes.length+'</div><div class="dc-sub">Sin ordenar</div></div>'+
-    '<div class="dash-card"><div class="dc-label">En Camino</div><div class="dc-value blue">'+enCamino.length+'</div><div class="dc-sub">Ordenado</div></div>'+
-    '<div class="dash-card"><div class="dc-label">Total Órdenes</div><div class="dc-value white">'+compras.length+'</div><div class="dc-sub">Historial</div></div>';
+    '<div class="dash-card '+cppClass+'" style="cursor:pointer" onclick="irAFacturas()"><div class="dc-label">Cuentas Por Pagar</div><div class="dc-value '+cppValClass+'">$'+totalPorPagar.toFixed(2)+'</div><div class="dc-sub">'+cppSub+'</div></div>'+
+    '<div class="dash-card '+(pendientes.length>0?'alert':'')+'"><div class="dc-label">Órdenes Pendientes</div><div class="dc-value warn">'+pendientes.length+'</div><div class="dc-sub">Sin ordenar</div></div>'+
+    '<div class="dash-card"><div class="dc-label">En Camino</div><div class="dc-value blue">'+enCamino.length+'</div><div class="dc-sub">Ordenado</div></div>';
   var activas=pendientes.concat(enCamino).slice(0,6);
   var pl=document.getElementById('dash-pending');
   if(!activas.length){pl.innerHTML='<div style="text-align:center;padding:28px;color:var(--text-muted);font-size:13px">✓ No hay órdenes activas</div>';}
@@ -901,6 +1056,7 @@ function filteredCompras(){
   var estado=document.getElementById('filtro-estado').value;
   var q=normalizar(document.getElementById('filtro-buscar').value.trim());
   return compras.filter(function(c){
+    if(getTipoCompra(c)==='suplidor')return false;
     if(mes&&!(c.fecha||'').startsWith(mes))return false;
     if(tipo&&normalizar(c.tipo)!==normalizar(tipo))return false;
     if(cat&&normalizar(c.categoria)!==normalizar(cat))return false;
@@ -954,49 +1110,213 @@ window.renderHistorial = function renderHistorial(){
   }).join('');
 }
 
-// ── SUPLIDORES ──
-function buildSupFilters(){
-  var mes=document.getElementById('sup-filtro-mes');
-  var meses=compras.map(function(c){return c.fecha?c.fecha.substring(0,7):'';}).filter(function(x,i,a){return x&&a.indexOf(x)===i;}).sort().reverse();
-  mes.innerHTML='<option value="">Todos los meses</option>';
-  meses.forEach(function(m){var p=m.split('-');var label=new Date(p[0],p[1]-1).toLocaleDateString('es',{month:'long',year:'numeric'});mes.innerHTML+='<option value="'+m+'">'+label.charAt(0).toUpperCase()+label.slice(1)+'</option>';});
-  var cat=document.getElementById('sup-filtro-cat');
-  cat.innerHTML='<option value="">Todas las categorías</option>';
-  CATS.forEach(function(c){cat.innerHTML+='<option>'+c+'</option>';});
+// ── FACTURAS SUPLIDORES ──
+function buildFacturasFilters(){
+  var sel=document.getElementById('fact-filtro-sup');
+  if(!sel)return;
+  var currentVal=sel.value;
+  var nombres=compras.filter(function(c){return getTipoCompra(c)==='suplidor'&&c.suplidor;}).map(function(c){return c.suplidor;});
+  suplidoresEntidades.forEach(function(s){if(nombres.indexOf(s.nombre)===-1)nombres.push(s.nombre);});
+  nombres=nombres.filter(function(x,i,a){return a.indexOf(x)===i;}).sort();
+  sel.innerHTML='<option value="">Todos los suplidores</option>'+nombres.map(function(n){return '<option value="'+n.replace(/"/g,'&quot;')+'">'+n+'</option>';}).join('');
+  if(currentVal)sel.value=currentVal;
 }
 
-window.renderSuplidores = function renderSuplidores(){
-  var mes=document.getElementById('sup-filtro-mes').value;
-  var cat=document.getElementById('sup-filtro-cat').value;
-  var data=compras.filter(function(c){return c.suplidor&&c.suplidor.trim();});
-  if(mes)data=data.filter(function(c){return (c.fecha||'').startsWith(mes);});
-  if(cat)data=data.filter(function(c){return c.categoria===cat;});
-  var totalGeneral=data.reduce(function(s,c){return s+(c.costo||0);},0);
-  var supNombres=data.map(function(c){return c.suplidor;}).filter(function(x,i,a){return a.indexOf(x)===i;});
-  var topSup='—';var topVal=0;
-  supNombres.forEach(function(n){var v=data.filter(function(c){return c.suplidor===n;}).reduce(function(s,c){return s+(c.costo||0);},0);if(v>topVal){topVal=v;topSup=n;}});
-  document.getElementById('sup-stats-row').innerHTML=
-    '<div class="stat-card"><div class="s-label">Total Gastado</div><div class="s-value">$'+totalGeneral.toFixed(2)+'</div></div>'+
-    '<div class="stat-card"><div class="s-label">Suplidores</div><div class="s-value white">'+supNombres.length+'</div></div>'+
-    '<div class="stat-card"><div class="s-label">Órdenes</div><div class="s-value blue">'+data.length+'</div></div>'+
-    '<div class="stat-card"><div class="s-label">Mayor Gasto</div><div class="s-value" style="font-size:13px;color:var(--text-secondary)">'+topSup+'</div></div>';
-  var grouped={};
-  data.forEach(function(c){if(!grouped[c.suplidor])grouped[c.suplidor]={total:0,ordenes:[]};grouped[c.suplidor].total+=(c.costo||0);grouped[c.suplidor].ordenes.push(c);});
-  var sorted=Object.entries(grouped).sort(function(a,b){return b[1].total-a[1].total;});
-  var maxTotal=sorted.length?sorted[0][1].total:1;
-  if(!sorted.length){document.getElementById('suplidores-content').innerHTML='<div class="empty-state"><div class="icon">🏭</div><p>No hay suplidores registrados todavía.</p></div>';return;}
-  document.getElementById('suplidores-content').innerHTML=sorted.map(function(entry){
-    var nombre=entry[0],info=entry[1];
-    var pct=Math.round((info.total/maxTotal)*100);
-    var recientes=info.ordenes.slice().sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');}).slice(0,4);
+window.renderFacturas = function renderFacturas(){
+  var filSup=document.getElementById('fact-filtro-sup').value;
+  var filEstado=document.getElementById('fact-filtro-estado').value;
+  var data=compras.filter(function(c){return getTipoCompra(c)==='suplidor';});
+  if(filSup)data=data.filter(function(c){return c.suplidor===filSup;});
+  if(filEstado)data=data.filter(function(c){return estadoPagoEfectivo(c)===filEstado;});
+  // stats
+  var totalPendiente=data.filter(function(c){return estadoPagoEfectivo(c)!=='Pagada';}).reduce(function(s,c){return s+(c.costo||0);},0);
+  var totalPagado=data.filter(function(c){return estadoPagoEfectivo(c)==='Pagada';}).reduce(function(s,c){return s+(c.costo||0);},0);
+  var vencidas=data.filter(function(c){return estadoPagoEfectivo(c)==='Vencida';}).length;
+  var proximas=data.filter(function(c){var d=diasEntre(hoyISO(),c.fechaPago);return estadoPagoEfectivo(c)==='Pendiente'&&d!==null&&d>=0&&d<=7;}).length;
+  document.getElementById('fact-stats-row').innerHTML=
+    '<div class="stat-card"><div class="s-label">Por Pagar</div><div class="s-value warn">$'+totalPendiente.toFixed(2)+'</div></div>'+
+    '<div class="stat-card"><div class="s-label">Pagado</div><div class="s-value">$'+totalPagado.toFixed(2)+'</div></div>'+
+    '<div class="stat-card"><div class="s-label">Vencidas</div><div class="s-value '+(vencidas>0?'warn':'white')+'" style="color:'+(vencidas>0?'#e08080':'var(--white)')+'">'+vencidas+'</div></div>'+
+    '<div class="stat-card"><div class="s-label">Próx. 7 días</div><div class="s-value blue">'+proximas+'</div></div>';
+  var body=document.getElementById('facturas-body'),empty=document.getElementById('facturas-empty');
+  if(!data.length){body.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  // Orden: pendientes por fechaPago asc, pagadas al final
+  var sorted=data.slice().sort(function(a,b){
+    var ea=estadoPagoEfectivo(a),eb=estadoPagoEfectivo(b);
+    if(ea==='Pagada'&&eb!=='Pagada')return 1;
+    if(ea!=='Pagada'&&eb==='Pagada')return -1;
+    return (a.fechaPago||'9999').localeCompare(b.fechaPago||'9999');
+  });
+  body.innerHTML=sorted.map(function(c){
+    var idx=compras.indexOf(c);
+    var ep=estadoPagoEfectivo(c);
+    var diasRest=c.fechaPago?diasEntre(hoyISO(),c.fechaPago):null;
+    var rowClass='';
+    if(ep==='Vencida')rowClass='row-vencida';
+    else if(ep==='Pendiente'&&diasRest!==null&&diasRest<=7)rowClass='row-urgente';
+    var fFact=c.fechaFactura?new Date(c.fechaFactura+'T12:00:00').toLocaleDateString('es',{day:'numeric',month:'short',year:'2-digit'}):'—';
+    var fPago=c.fechaPago?new Date(c.fechaPago+'T12:00:00').toLocaleDateString('es',{day:'numeric',month:'short',year:'2-digit'}):'—';
+    var diasTxt='';
+    if(c.fechaPago&&ep!=='Pagada'){
+      if(diasRest<0)diasTxt='<div style="font-size:10px;color:#e08080;margin-top:2px">Vencida hace '+Math.abs(diasRest)+'d</div>';
+      else if(diasRest===0)diasTxt='<div style="font-size:10px;color:var(--warning);margin-top:2px">Vence hoy</div>';
+      else diasTxt='<div style="font-size:10px;color:var(--text-muted);margin-top:2px">En '+diasRest+'d</div>';
+    }
+    return '<tr class="'+rowClass+'">'+
+      '<td><div style="font-weight:500">'+(c.suplidor||'—')+'</div><div class="order-meta">ORD-'+String(c.num||'?').padStart(4,'0')+'</div></td>'+
+      '<td style="font-family:\'IBM Plex Mono\',monospace;font-size:12px;color:var(--text-secondary)">'+(c.invoiceNumber||'—')+'</td>'+
+      '<td style="font-size:12px;color:var(--text-secondary)">'+fFact+'</td>'+
+      '<td style="font-size:12px">'+fPago+diasTxt+'</td>'+
+      '<td class="col-desc"><div class="main">'+(c.descripcion||'').substring(0,60)+((c.descripcion||'').length>60?'…':'')+'</div></td>'+
+      '<td class="price">'+(c.costo?'$'+c.costo.toFixed(2):'—')+'</td>'+
+      '<td><select class="inline-estado" onchange="cambiarEstadoPago('+idx+',this.value)">'+
+        ['Pendiente','Pagada'].map(function(op){return '<option'+(c.estadoPago===op||(!c.estadoPago&&op==='Pendiente')?' selected':'')+'>'+op+'</option>';}).join('')+
+        '</select>'+(ep==='Vencida'?'<div style="margin-top:4px"><span class="badge badge-vencida">Vencida</span></div>':'')+'</td>'+
+      '<td><button class="action-btn" onclick="openModal('+idx+')">Editar</button></td>'+
+      '</tr>';
+  }).join('');
+}
+
+window.cambiarEstadoPago=async function(idx,nuevoEstado){
+  var c=compras[idx];
+  if(!c)return;
+  showLoading('Actualizando...');
+  try{
+    await updateDoc(doc(db,'compras',c.firebaseId),{estadoPago:nuevoEstado});
+    c.estadoPago=nuevoEstado;
+    showToast('✓ '+(nuevoEstado==='Pagada'?'Factura marcada como pagada':'Factura marcada como pendiente'));
+    window.renderFacturas();
+    renderDashboard();
+  }catch(e){showToast('Error al actualizar.');console.error(e);}
+  finally{hideLoading();}
+}
+
+// ── SUPLIDORES ENTIDADES (CRUD) ──
+window.renderSuplidoresEntidades = function renderSuplidoresEntidades(){
+  var container=document.getElementById('suplidores-entidades-content');
+  if(!suplidoresEntidades.length){
+    container.innerHTML='<div class="empty-state"><div class="icon">🏭</div><p>No hay suplidores registrados. Toca "+ Nuevo Suplidor" para empezar.</p></div>';
+    return;
+  }
+  // Enriquecer con stats de compras
+  container.innerHTML=suplidoresEntidades.map(function(s){
+    var facturas=compras.filter(function(c){return getTipoCompra(c)==='suplidor'&&c.suplidor===s.nombre;});
+    var total=facturas.reduce(function(sum,c){return sum+(c.costo||0);},0);
+    var pendientes=facturas.filter(function(c){return estadoPagoEfectivo(c)!=='Pagada';}).length;
     return '<div class="suplidor-card">'+
-      '<div class="suplidor-header"><div><div class="suplidor-name">'+nombre+'</div><div class="suplidor-meta">'+info.ordenes.length+' órdenes · '+info.ordenes.filter(function(o){return o.estado!=='Recibido';}).length+' activas</div></div><div class="suplidor-total">$'+info.total.toFixed(2)+'</div></div>'+
-      '<div class="suplidor-bar-wrap"><div class="suplidor-bar-fill" style="width:'+pct+'%"></div></div>'+
-      '<div class="suplidor-orders">'+recientes.map(function(o){
-        return '<div class="suplidor-order-row"><span class="badge badge-'+(o.estado||'').toLowerCase()+'" style="flex-shrink:0">'+o.estado+'</span><span class="suplidor-order-desc">'+o.descripcion+'</span><span class="suplidor-order-price">'+(o.costo?'$'+o.costo.toFixed(2):'—')+'</span></div>';
-      }).join('')+(info.ordenes.length>4?'<div style="font-size:11px;color:var(--text-muted);text-align:center;padding:4px">+'+(info.ordenes.length-4)+' más</div>':'')+'</div>'+
+      '<div class="suplidor-header">'+
+        '<div><div class="suplidor-name">'+s.nombre+'</div>'+
+        '<div class="suplidor-meta">'+facturas.length+' facturas · '+pendientes+' pendientes'+(s.contacto?' · '+s.contacto:'')+'</div></div>'+
+        '<div style="display:flex;gap:6px;align-items:center"><div class="suplidor-total">$'+total.toFixed(2)+'</div>'+
+        '<button class="action-btn" onclick="openSuplidorModal(\''+s.firebaseId+'\')">Editar</button></div>'+
+      '</div>'+
+      (s.notas?'<div style="font-size:12px;color:var(--text-muted);padding:8px 0 0 0;border-top:1px solid var(--border);margin-top:8px">'+s.notas+'</div>':'')+
       '</div>';
   }).join('');
+}
+
+window.openSuplidorModal=function(id){
+  editSupId=id;
+  if(id){
+    var s=suplidoresEntidades.find(function(x){return x.firebaseId===id;});
+    if(!s)return;
+    document.getElementById('modal-sup-title').textContent='Editar Suplidor';
+    document.getElementById('sup-nombre').value=s.nombre||'';
+    document.getElementById('sup-contacto').value=s.contacto||'';
+    document.getElementById('sup-notas').value=s.notas||'';
+    document.getElementById('sup-btn-delete').style.display='block';
+  }else{
+    document.getElementById('modal-sup-title').textContent='Nuevo Suplidor';
+    document.getElementById('sup-nombre').value='';
+    document.getElementById('sup-contacto').value='';
+    document.getElementById('sup-notas').value='';
+    document.getElementById('sup-btn-delete').style.display='none';
+  }
+  document.getElementById('modal-sup-overlay').classList.add('open');
+}
+window.closeSupModal=function(){document.getElementById('modal-sup-overlay').classList.remove('open');editSupId=null;}
+window.closeSupModalOutside=function(e){if(e.target===document.getElementById('modal-sup-overlay'))closeSupModal();}
+
+window.guardarSuplidor=async function(){
+  var nombre=document.getElementById('sup-nombre').value.trim();
+  if(!nombre){alert('Escribe el nombre del suplidor.');return;}
+  var payload={
+    nombre:nombre,
+    contacto:document.getElementById('sup-contacto').value.trim(),
+    notas:document.getElementById('sup-notas').value.trim()
+  };
+  showLoading('Guardando...');
+  try{
+    if(editSupId){
+      await updateDoc(doc(db,'suplidores',editSupId),payload);
+    }else{
+      payload.creadoEn=new Date().toISOString();
+      await addDoc(collection(db,'suplidores'),payload);
+    }
+    await loadData();
+    closeSupModal();
+    window.renderSuplidoresEntidades();
+    showToast('✓ Suplidor guardado');
+  }catch(e){showToast('Error al guardar.');console.error(e);}
+  finally{hideLoading();}
+}
+
+window.eliminarSuplidor=async function(){
+  if(!editSupId)return;
+  var s=suplidoresEntidades.find(function(x){return x.firebaseId===editSupId;});
+  if(!s)return;
+  var facturas=compras.filter(function(c){return getTipoCompra(c)==='suplidor'&&c.suplidor===s.nombre;});
+  if(facturas.length){
+    if(!confirm('Este suplidor tiene '+facturas.length+' factura(s) asociada(s). ¿Eliminar solo el suplidor? Las facturas no se borran.'))return;
+  }else{
+    if(!confirm('¿Eliminar a "'+s.nombre+'"?'))return;
+  }
+  showLoading('Eliminando...');
+  try{
+    await deleteDoc(doc(db,'suplidores',editSupId));
+    await loadData();
+    closeSupModal();
+    window.renderSuplidoresEntidades();
+    showToast('Suplidor eliminado');
+  }catch(e){showToast('Error al eliminar.');}
+  finally{hideLoading();}
+}
+
+// ── Dropdown de suplidores en formulario nueva ──
+function refreshSuplidorDropdown(){
+  var sel=document.getElementById('suplidor-dropdown');
+  if(!sel)return;
+  var cur=sel.value;
+  sel.innerHTML='<option value="">Seleccionar suplidor...</option>'+
+    suplidoresEntidades.map(function(s){return '<option value="'+s.nombre.replace(/"/g,'&quot;')+'">'+s.nombre+'</option>';}).join('')+
+    '<option value="__nuevo__">+ Nuevo suplidor…</option>';
+  if(cur)sel.value=cur;
+}
+window.onSuplidorDropdownChange=function(){
+  var sel=document.getElementById('suplidor-dropdown');
+  if(sel.value==='__nuevo__'){sel.value='';openSuplidorModal(null);}
+}
+
+// ── Selector tipo de compra (online vs suplidor) ──
+window.selectTipoCompra=function(tipo,btn){
+  document.getElementById('tipoCompra').value=tipo;
+  document.getElementById('tc-online-btn').className='tipo-btn'+(tipo==='online'?' sel-negocio':'');
+  document.getElementById('tc-suplidor-btn').className='tipo-btn'+(tipo==='suplidor'?' sel-negocio':'');
+  var isSup=tipo==='suplidor';
+  document.getElementById('grupo-donde').style.display=isSup?'none':'flex';
+  document.getElementById('grupo-suplidor-texto').style.display=isSup?'none':'flex';
+  document.getElementById('grupo-suplidor-dropdown').style.display=isSup?'flex':'none';
+  document.getElementById('grupo-invoice').style.display=isSup?'flex':'none';
+  document.getElementById('grupo-fecha').style.display=isSup?'none':'flex';
+  document.getElementById('grupo-fecha-factura').style.display=isSup?'flex':'none';
+  document.getElementById('grupo-fecha-pago').style.display=isSup?'flex':'none';
+  document.getElementById('grupo-estado-pago').style.display=isSup?'flex':'none';
+  document.getElementById('grupo-tracking').style.display=isSup?'none':'flex';
+  if(isSup){
+    if(!document.getElementById('fechaFactura').value)document.getElementById('fechaFactura').value=hoyISO();
+    refreshSuplidorDropdown();
+  }
 }
 
 // ── RESUMEN ──
@@ -1044,6 +1364,15 @@ window.openModal=function(idx){
   document.getElementById('edit-tracking').value=c.tracking||'';
   document.getElementById('edit-nota').value='';
   document.getElementById('nota-field').style.display='none';
+  // Campos de factura solo si es tipoCompra=suplidor
+  var isSup=getTipoCompra(c)==='suplidor';
+  document.getElementById('edit-factura-fields').style.display=isSup?'block':'none';
+  if(isSup){
+    document.getElementById('edit-invoiceNumber').value=c.invoiceNumber||'';
+    document.getElementById('edit-fechaFactura').value=c.fechaFactura||'';
+    document.getElementById('edit-fechaPago').value=c.fechaPago||'';
+    document.getElementById('edit-estadoPago').value=c.estadoPago||'Pendiente';
+  }
   editFotoFiles=[];
   editFotosToDelete=[];
   document.getElementById('edit-foto-preview').innerHTML='';
