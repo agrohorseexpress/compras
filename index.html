@@ -508,9 +508,17 @@ tr.row-urgente td:first-child{border-left:3px solid var(--warning);}
 
       <!-- SUPLIDORES TAB (entidades) -->
       <div id="htab-content-suplidores" style="display:none">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
           <p style="color:var(--text-muted);font-size:13px;font-weight:300">Lista de suplidores con su contacto y notas.</p>
           <button onclick="openSuplidorModal(null)" style="background:var(--gold);border:none;color:var(--navy-900);padding:8px 16px;border-radius:var(--radius);font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:1px;text-transform:uppercase;">+ Nuevo Suplidor</button>
+        </div>
+        <div class="filters" style="margin-bottom:16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+          <input type="text" id="sup-filtro-buscar" placeholder="🔍 Buscar suplidor..." oninput="renderSuplidoresEntidades()" style="width:200px">
+          <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px">Desde</label>
+          <input type="date" id="sup-filtro-desde" onchange="renderSuplidoresEntidades()" style="width:150px">
+          <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px">Hasta</label>
+          <input type="date" id="sup-filtro-hasta" onchange="renderSuplidoresEntidades()" style="width:150px">
+          <button onclick="document.getElementById('sup-filtro-buscar').value='';document.getElementById('sup-filtro-desde').value='';document.getElementById('sup-filtro-hasta').value='';renderSuplidoresEntidades();" style="background:none;border:1px solid var(--border);color:var(--text-muted);padding:6px 12px;border-radius:var(--radius);font-size:11px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif">Limpiar</button>
         </div>
         <div id="suplidores-entidades-content"></div>
       </div>
@@ -1359,9 +1367,23 @@ window.renderSuplidoresEntidades = function renderSuplidoresEntidades(){
     container.innerHTML='<div class="empty-state"><div class="icon">🏭</div><p>No hay suplidores registrados. Toca "+ Nuevo Suplidor" para empezar.</p></div>';
     return;
   }
-  // Enriquecer con stats de compras
-  container.innerHTML=suplidoresEntidades.map(function(s){
-    var facturas=compras.filter(function(c){return getTipoCompra(c)==='suplidor'&&c.suplidor===s.nombre;});
+  var buscar=(document.getElementById('sup-filtro-buscar')||{value:''}).value.toLowerCase().trim();
+  var desde=(document.getElementById('sup-filtro-desde')||{value:''}).value;
+  var hasta=(document.getElementById('sup-filtro-hasta')||{value:''}).value;
+  var listaFiltrada=suplidoresEntidades.filter(function(s){
+    return !buscar||(s.nombre||'').toLowerCase().includes(buscar);
+  });
+  if(!listaFiltrada.length){
+    container.innerHTML='<div class="empty-state"><div class="icon">🔍</div><p>No se encontraron suplidores.</p></div>';
+    return;
+  }
+  container.innerHTML=listaFiltrada.map(function(s){
+    var facturas=compras.filter(function(c){
+      if(getTipoCompra(c)!=='suplidor'||c.suplidor!==s.nombre)return false;
+      if(desde&&c.fecha&&c.fecha<desde)return false;
+      if(hasta&&c.fecha&&c.fecha>hasta)return false;
+      return true;
+    });
     var total=facturas.reduce(function(sum,c){return sum+(c.costo||0);},0);
     var pendientes=facturas.filter(function(c){return estadoPagoEfectivo(c)!=='Pagada';}).length;
     return '<div class="suplidor-card">'+
