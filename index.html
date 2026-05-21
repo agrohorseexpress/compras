@@ -1,0 +1,1681 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agro Horse Express — Registro de Compras</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--navy-900:#0a0f1e;--navy-800:#0d1529;--navy-700:#111d35;--navy-600:#162442;--navy-500:#1e3260;--border:#1e3260;--border-light:#2a4580;--gold:#c8a84b;--gold-light:#e8c96a;--text:#e8eef8;--text-secondary:#7a9ac0;--text-muted:#445e80;--white:#fff;--success:#4caf82;--warning:#d4a040;--danger:#c05050;--radius:6px;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--navy-900);color:var(--text);min-height:100vh;font-size:14px;line-height:1.5;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(30,50,96,0.15) 1px,transparent 1px),linear-gradient(90deg,rgba(30,50,96,0.15) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+
+.auth-screen{position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--navy-900);}
+.auth-screen.hidden{display:none;}
+.auth-card{background:var(--navy-800);border:1px solid var(--border-light);border-radius:12px;padding:36px;width:100%;max-width:420px;box-shadow:0 32px 80px rgba(0,0,0,0.6);position:relative;z-index:1;}
+.auth-logo{display:flex;align-items:center;gap:12px;margin-bottom:24px;}
+.auth-logo-mark{width:40px;height:40px;border:1.5px solid var(--gold);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;}
+.auth-logo-text{font-family:'Playfair Display',serif;font-size:18px;font-weight:600;color:var(--white);}
+.auth-logo-text span{color:var(--gold);}
+.auth-title{font-family:'Playfair Display',serif;font-size:22px;font-weight:600;color:var(--white);margin-bottom:6px;}
+.auth-subtitle{font-size:13px;color:var(--text-muted);font-weight:300;margin-bottom:24px;line-height:1.6;}
+.auth-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+.auth-label{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary);}
+.auth-input-wrap{position:relative;}
+.auth-input{background:var(--navy-700);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:12px 44px 12px 14px;font-family:'IBM Plex Sans',sans-serif;font-size:15px;transition:all 0.15s;outline:none;width:100%;}
+.auth-input::placeholder{color:var(--text-muted);}
+.auth-input:focus{border-color:var(--gold);background:var(--navy-600);box-shadow:0 0 0 3px rgba(200,168,75,0.08);}
+.toggle-pw{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:4px;}
+.auth-hint{font-size:12px;color:var(--text-muted);margin-bottom:20px;font-weight:300;}
+.auth-btn{width:100%;padding:13px;background:var(--gold);color:var(--navy-900);border:none;border-radius:var(--radius);font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:13px;cursor:pointer;letter-spacing:1.5px;text-transform:uppercase;transition:all 0.15s;}
+.auth-btn:hover{background:var(--gold-light);}
+.auth-error{background:rgba(192,80,80,0.12);border:1px solid rgba(192,80,80,0.3);color:#e09090;padding:10px 14px;border-radius:var(--radius);font-size:13px;margin-bottom:16px;display:none;}
+.auth-error.show{display:block;}
+.strength-bar{height:3px;background:var(--border);border-radius:2px;margin-top:8px;overflow:hidden;}
+.strength-fill{height:100%;border-radius:2px;transition:all 0.3s;width:0%;}
+
+#screen-profile{position:fixed;inset:0;z-index:400;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--navy-900);}
+#screen-profile.hidden{display:none;}
+.preset-btn{background:var(--navy-700);border:1px solid var(--border-light);color:var(--text);padding:10px 18px;border-radius:20px;font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s;}
+.preset-btn:hover{border-color:var(--gold);color:var(--gold);}
+
+.loading-overlay{position:fixed;inset:0;background:rgba(10,15,30,0.75);z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;backdrop-filter:blur(4px);}
+.loading-overlay.hidden{display:none;}
+.spinner{width:36px;height:36px;border:3px solid var(--border-light);border-top-color:var(--gold);border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-text{font-size:13px;color:var(--text-muted);letter-spacing:1px;}
+
+#app{display:none;}
+header{background:var(--navy-800);border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;justify-content:space-between;min-height:60px;position:sticky;top:0;z-index:100;box-shadow:0 2px 20px rgba(0,0,0,0.4);gap:12px;flex-wrap:wrap;}
+.logo{display:flex;align-items:center;gap:12px;}
+.logo-mark{width:32px;height:32px;border:1.5px solid var(--gold);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:15px;}
+.logo-text{font-family:'Playfair Display',serif;font-size:16px;font-weight:600;color:var(--white);}
+.logo-text span{color:var(--gold);}
+.header-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.user-chip{display:flex;align-items:center;gap:7px;background:var(--navy-700);border:1px solid var(--border);border-radius:20px;padding:5px 12px;font-size:12px;color:var(--text-secondary);}
+.user-chip .dot{width:7px;height:7px;background:var(--success);border-radius:50%;flex-shrink:0;}
+nav{display:flex;gap:2px;background:var(--navy-900);padding:3px;border-radius:6px;border:1px solid var(--border);}
+nav button{background:none;border:none;color:var(--text-muted);padding:6px 12px;border-radius:4px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:500;letter-spacing:0.5px;text-transform:uppercase;transition:all 0.15s;position:relative;white-space:nowrap;}
+nav button.active{background:var(--navy-500);color:var(--gold);box-shadow:inset 0 0 0 1px var(--border-light);}
+nav button:hover:not(.active){color:var(--text-secondary);}
+.nav-badge{position:absolute;top:2px;right:3px;background:var(--warning);color:var(--navy-900);font-size:9px;font-weight:700;border-radius:10px;padding:1px 4px;}
+.logout-btn{background:none;border:1px solid var(--border);color:var(--text-muted);padding:6px 10px;border-radius:var(--radius);font-size:11px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;letter-spacing:0.5px;text-transform:uppercase;transition:all 0.15s;}
+.logout-btn:hover{border-color:var(--danger);color:var(--danger);}
+
+main{max-width:1400px;margin:0 auto;padding:28px 32px;position:relative;z-index:1;}
+.view{display:none;}
+.view.active{display:block;}
+.page-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px;padding-bottom:18px;border-bottom:1px solid var(--border);}
+.page-header h1{font-family:'Playfair Display',serif;font-size:24px;font-weight:600;color:var(--white);}
+.page-header p{color:var(--text-muted);font-size:13px;margin-top:4px;font-weight:300;}
+
+.dash-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
+.dash-card{background:var(--navy-800);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;position:relative;overflow:hidden;}
+.dash-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--gold);opacity:0.4;}
+.dash-card.alert::before{background:var(--warning);opacity:0.8;}
+.dc-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);margin-bottom:6px;}
+.dc-value{font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:500;color:var(--gold);}
+.dc-value.warn{color:var(--warning);}
+.dc-value.blue{color:#90c0f0;}
+.dc-value.white{color:var(--white);}
+.dc-sub{font-size:11px;color:var(--text-muted);margin-top:3px;}
+.section-title{font-family:'Playfair Display',serif;font-size:15px;font-weight:600;color:var(--white);margin-bottom:12px;display:flex;align-items:center;gap:10px;}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border);}
+.pending-list{display:grid;gap:8px;margin-bottom:28px;}
+.pending-card{background:var(--navy-800);border:1px solid var(--border);border-left:3px solid var(--warning);border-radius:var(--radius);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.pending-card.ordenado{border-left-color:#5090d0;}
+.pc-info{flex:1;min-width:0;}
+.pc-title{color:var(--text);font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pc-meta{color:var(--text-muted);font-size:11px;margin-top:2px;}
+.pc-right{display:flex;align-items:center;gap:8px;white-space:nowrap;}
+.chart-wrap{background:var(--navy-800);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:28px;}
+.chart-bars{display:flex;align-items:flex-end;gap:8px;height:110px;}
+.chart-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end;}
+.chart-bar{width:100%;background:var(--navy-500);border-radius:3px 3px 0 0;transition:all 0.3s;min-height:3px;}
+.chart-bar:hover{background:var(--gold);}
+.chart-bar-val{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-muted);}
+.chart-bar-label{font-size:10px;color:var(--text-muted);}
+
+.form-card{background:var(--navy-800);border:1px solid var(--border);border-radius:var(--radius);}
+.form-section{padding:20px 24px;border-bottom:1px solid var(--border);}
+.form-section:last-child{border-bottom:none;}
+.section-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--gold);margin-bottom:14px;display:flex;align-items:center;gap:10px;}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.form-group{display:flex;flex-direction:column;gap:5px;}
+.form-group.full{grid-column:1/-1;}
+label{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:1px;color:var(--text-secondary);}
+input,select,textarea{background:var(--navy-700);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:9px 12px;font-family:'IBM Plex Sans',sans-serif;font-size:14px;transition:all 0.15s;outline:none;width:100%;}
+input::placeholder,textarea::placeholder{color:var(--text-muted);}
+input:focus,select:focus,textarea:focus{border-color:var(--gold);background:var(--navy-600);box-shadow:0 0 0 3px rgba(200,168,75,0.08);}
+select option{background:var(--navy-700);}
+textarea{resize:vertical;min-height:70px;}
+.tipo-group{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.tipo-btn{padding:10px 14px;border-radius:var(--radius);border:1px solid var(--border);background:var(--navy-700);color:var(--text-muted);cursor:pointer;font-family:'IBM Plex Sans',sans-serif;font-size:13px;font-weight:500;text-align:center;transition:all 0.15s;}
+.tipo-btn.sel-negocio{border-color:var(--gold);background:rgba(200,168,75,0.08);color:var(--gold);}
+.tipo-btn.sel-cliente{border-color:#5090d0;background:rgba(80,144,208,0.08);color:#90c0f0;}
+.form-footer{padding:16px 24px;background:var(--navy-900);border-top:1px solid var(--border);border-radius:0 0 var(--radius) var(--radius);}
+.submit-btn{width:100%;padding:12px;background:var(--gold);color:var(--navy-900);border:none;border-radius:var(--radius);font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:13px;cursor:pointer;letter-spacing:1.5px;text-transform:uppercase;transition:all 0.15s;}
+.submit-btn:hover{background:var(--gold-light);}
+.submit-btn:disabled{opacity:0.5;cursor:not-allowed;}
+
+.historial-top{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:18px;}
+.filters{display:flex;gap:6px;flex-wrap:wrap;}
+.filters select,.filters input{width:auto;font-size:12px;padding:7px 10px;background:var(--navy-800);}
+.filters input{width:140px;}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;}
+.stat-card{background:var(--navy-800);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;position:relative;overflow:hidden;}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--gold);opacity:0.4;}
+.s-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);margin-bottom:5px;}
+.s-value{font-family:'IBM Plex Mono',monospace;font-size:19px;font-weight:500;color:var(--gold);}
+.s-value.blue{color:#90c0f0;}.s-value.white{color:var(--white);}.s-value.warn{color:var(--warning);}
+.table-wrap{background:var(--navy-800);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead{background:var(--navy-900);border-bottom:1px solid var(--border);}
+th{padding:11px 18px;text-align:left;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-muted);white-space:nowrap;}
+td{padding:14px 18px;border-bottom:1px solid var(--border);vertical-align:top;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--navy-700);}
+.order-num{font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;color:var(--gold);}
+.order-meta{font-size:11px;color:var(--text-muted);margin-top:2px;line-height:1.5;}
+.col-desc{max-width:200px;}
+.col-desc .main{color:var(--text);line-height:1.4;}
+.col-desc .sub{color:var(--text-muted);font-size:11px;margin-top:2px;}
+.badge{display:inline-block;padding:3px 7px;border-radius:3px;font-size:10px;font-weight:600;letter-spacing:0.8px;text-transform:uppercase;white-space:nowrap;}
+.badge-negocio{background:rgba(200,168,75,0.12);color:var(--gold);border:1px solid rgba(200,168,75,0.25);}
+.badge-cliente{background:rgba(80,144,208,0.12);color:#90c0f0;border:1px solid rgba(80,144,208,0.25);}
+.badge-recibido{background:rgba(76,175,130,0.12);color:var(--success);border:1px solid rgba(76,175,130,0.25);}
+.badge-pendiente{background:rgba(212,160,64,0.12);color:var(--warning);border:1px solid rgba(212,160,64,0.25);}
+.badge-ordenado{background:rgba(80,144,208,0.12);color:#90c0f0;border:1px solid rgba(80,144,208,0.25);}
+.badge-pagada{background:rgba(76,175,130,0.12);color:var(--success);border:1px solid rgba(76,175,130,0.25);}
+.badge-vencida{background:rgba(192,80,80,0.18);color:#e08080;border:1px solid rgba(192,80,80,0.4);}
+tr.row-vencida td{background:rgba(192,80,80,0.08) !important;}
+tr.row-vencida td:first-child{border-left:3px solid var(--danger);}
+tr.row-urgente td{background:rgba(212,160,64,0.06) !important;}
+tr.row-urgente td:first-child{border-left:3px solid var(--warning);}
+.inline-estado{background:var(--navy-700);border:1px solid var(--border-light);color:var(--text);padding:5px 8px;border-radius:var(--radius);font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:500;cursor:pointer;outline:none;}
+.dash-card.payable::before{background:var(--danger);opacity:0.8;}
+.dc-value.red{color:#e08080;}
+.price{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--text);white-space:nowrap;}
+.tracking-chip{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);background:var(--navy-700);padding:2px 6px;border-radius:3px;border:1px solid var(--border);}
+.action-btn{background:none;border:1px solid var(--border);color:var(--text-muted);padding:4px 9px;border-radius:var(--radius);font-size:11px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;font-weight:500;letter-spacing:0.5px;text-transform:uppercase;transition:all 0.15s;}
+.action-btn:hover{border-color:var(--gold);color:var(--gold);}
+.empty-state{text-align:center;padding:50px 24px;color:var(--text-muted);}
+.empty-state .icon{font-size:32px;margin-bottom:10px;opacity:0.4;}
+.empty-state p{font-size:13px;font-weight:300;}
+
+.suplidor-card{background:var(--navy-800);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:12px;}
+.suplidor-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.suplidor-name{font-family:'Playfair Display',serif;font-size:16px;font-weight:600;color:var(--white);}
+.suplidor-total{font-family:'IBM Plex Mono',monospace;font-size:18px;color:var(--gold);}
+.suplidor-meta{font-size:11px;color:var(--text-muted);margin-top:3px;}
+.suplidor-bar-wrap{background:var(--border);border-radius:2px;height:4px;margin-bottom:10px;overflow:hidden;}
+.suplidor-bar-fill{height:100%;background:var(--gold);border-radius:2px;transition:width 0.4s;}
+.suplidor-orders{display:grid;gap:6px;}
+.suplidor-order-row{display:flex;align-items:center;justify-content:space-between;font-size:12px;padding:6px 10px;background:var(--navy-700);border-radius:4px;gap:10px;}
+.suplidor-order-desc{color:var(--text-secondary);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.suplidor-order-price{font-family:'IBM Plex Mono',monospace;color:var(--text);white-space:nowrap;}
+
+.resumen-card{background:var(--navy-800);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:12px;}
+.cat-row{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);}
+.cat-row:last-child{border-bottom:none;}
+.cat-name{font-size:13px;color:var(--text);}
+.cat-amt{font-family:'IBM Plex Mono',monospace;font-size:13px;color:var(--gold);}
+.cat-bar-wrap{flex:1;margin:0 12px;background:var(--border);border-radius:2px;height:4px;overflow:hidden;}
+.cat-bar-fill{height:100%;background:var(--gold);border-radius:2px;transition:width 0.4s;}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--navy-600);border:1px solid var(--gold);color:var(--gold);padding:11px 22px;border-radius:4px;font-size:13px;font-weight:500;z-index:999;transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1);white-space:nowrap;box-shadow:0 8px 32px rgba(0,0,0,0.5);}
+.toast.show{transform:translateX(-50%) translateY(0);}
+
+.modal-overlay{position:fixed;inset:0;background:rgba(5,10,20,0.85);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;opacity:0;pointer-events:none;transition:opacity 0.2s;backdrop-filter:blur(4px);}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{background:var(--navy-800);border:1px solid var(--border-light);border-radius:var(--radius);width:100%;max-width:520px;transform:translateY(14px);transition:transform 0.2s;box-shadow:0 24px 64px rgba(0,0,0,0.6);max-height:90vh;overflow-y:auto;}
+.modal-overlay.open .modal{transform:translateY(0);}
+.modal-header{padding:16px 22px;border-bottom:1px solid var(--border);background:var(--navy-900);position:sticky;top:0;z-index:1;}
+.modal-header h2{font-family:'Playfair Display',serif;font-size:17px;font-weight:600;color:var(--white);}
+.modal-body{padding:20px;display:grid;gap:12px;}
+.modal-footer{display:flex;gap:8px;padding:12px 20px;background:var(--navy-900);border-top:1px solid var(--border);position:sticky;bottom:0;}
+.btn-cancel{flex:1;padding:9px;background:none;border:1px solid var(--border);color:var(--text-muted);border-radius:var(--radius);font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:500;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.15s;}
+.btn-cancel:hover{border-color:var(--text-muted);color:var(--text);}
+.btn-save{flex:2;padding:9px;background:var(--gold);border:none;color:var(--navy-900);border-radius:var(--radius);font-family:'IBM Plex Sans',sans-serif;font-weight:600;font-size:12px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.15s;}
+.btn-save:hover{background:var(--gold-light);}
+.btn-save:disabled{opacity:0.5;cursor:not-allowed;}
+.btn-delete{flex:1;padding:9px;background:none;border:1px solid rgba(192,80,80,0.4);color:var(--danger);border-radius:var(--radius);font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:500;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all 0.15s;}
+.btn-delete:hover{background:rgba(192,80,80,0.1);}
+
+@media(max-width:680px){
+  header{padding:8px 14px;}main{padding:14px 12px;}
+  .form-grid{grid-template-columns:1fr;}.form-group.full{grid-column:1;}
+  .stats-row,.dash-grid{grid-template-columns:1fr 1fr;}
+  th:nth-child(4),td:nth-child(4),th:nth-child(6),td:nth-child(6),th:nth-child(7),td:nth-child(7){display:none;}
+  .user-chip{display:none;}
+  nav button{padding:5px 8px;font-size:10px;}
+}
+</style>
+</head>
+<body>
+
+<!-- SETUP -->
+<div class="auth-screen hidden" id="screen-setup">
+  <div class="auth-card">
+    <div class="auth-logo"><div class="auth-logo-mark">🐴</div><div class="auth-logo-text">Agro Horse <span>Express</span></div></div>
+    <div class="auth-title">Bienvenido</div>
+    <div class="auth-subtitle">Primera vez aquí. Crea una contraseña para proteger la aplicación.</div>
+    <div class="auth-group">
+      <div class="auth-label">Nueva Contraseña</div>
+      <div class="auth-input-wrap">
+        <input class="auth-input" type="password" id="setup-pw1" placeholder="Crea tu contraseña" oninput="checkStrength()">
+        <button class="toggle-pw" onclick="togglePw('setup-pw1',this)" type="button">👁</button>
+      </div>
+      <div class="strength-bar"><div class="strength-fill" id="strength-fill"></div></div>
+    </div>
+    <div class="auth-group">
+      <div class="auth-label">Confirmar Contraseña</div>
+      <div class="auth-input-wrap">
+        <input class="auth-input" type="password" id="setup-pw2" placeholder="Repite la contraseña" onkeydown="if(event.key==='Enter')createPassword()">
+        <button class="toggle-pw" onclick="togglePw('setup-pw2',this)" type="button">👁</button>
+      </div>
+    </div>
+    <div class="auth-hint">Guarda esta contraseña en un lugar seguro.</div>
+    <div class="auth-error" id="setup-error"></div>
+    <button class="auth-btn" onclick="createPassword()">Crear Contraseña y Continuar</button>
+  </div>
+</div>
+
+<!-- LOGIN -->
+<div class="auth-screen hidden" id="screen-login">
+  <div class="auth-card">
+    <div class="auth-logo"><div class="auth-logo-mark">🐴</div><div class="auth-logo-text">Agro Horse <span>Express</span></div></div>
+    <div class="auth-title">Acceso Restringido</div>
+    <div class="auth-subtitle">Ingresa la contraseña para acceder al registro de compras.</div>
+    <div class="auth-group">
+      <div class="auth-label">Contraseña</div>
+      <div class="auth-input-wrap">
+        <input class="auth-input" type="password" id="login-pw" placeholder="Tu contraseña" onkeydown="if(event.key==='Enter')doLogin()">
+        <button class="toggle-pw" onclick="togglePw('login-pw',this)" type="button">👁</button>
+      </div>
+    </div>
+    <div class="auth-error" id="login-error"></div>
+    <div style="margin-bottom:20px"></div>
+    <button class="auth-btn" onclick="doLogin()">Entrar</button>
+    <div style="text-align:center;margin-top:16px">
+      <button onclick="showSetup()" style="background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;text-decoration:underline;">Primera vez aquí — crear contraseña</button>
+    </div>
+  </div>
+</div>
+
+<!-- PERFIL -->
+<div id="screen-profile" class="hidden">
+  <div class="auth-card" style="max-width:440px">
+    <div class="auth-logo"><div class="auth-logo-mark">🐴</div><div class="auth-logo-text">Agro Horse <span>Express</span></div></div>
+    <div class="auth-title">¿Quién eres?</div>
+    <div class="auth-subtitle">Selecciona tu nombre o agrega uno nuevo.</div>
+    <div id="preset-list" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:18px">
+      <div style="font-size:12px;color:var(--text-muted)">Cargando...</div>
+    </div>
+    <div class="auth-group" style="margin-bottom:10px">
+      <div class="auth-label">Agregar nombre nuevo</div>
+      <div style="display:flex;gap:8px">
+        <input class="auth-input" type="text" id="profile-name" placeholder="Ej: Carlos Rodríguez" onkeydown="if(event.key==='Enter')addPreset()" style="flex:1;padding:9px 12px;font-size:14px">
+        <button onclick="addPreset()" style="background:var(--navy-600);border:1px solid var(--border-light);color:var(--gold);padding:9px 14px;border-radius:var(--radius);font-family:'IBM Plex Sans',sans-serif;font-size:13px;cursor:pointer;white-space:nowrap;">+ Agregar</button>
+      </div>
+    </div>
+    <div class="auth-error" id="profile-error"></div>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Toca tu nombre para entrar. Mantén presionado para eliminarlo.</div>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div class="loading-overlay hidden" id="loading-overlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-text">Cargando...</div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <header>
+    <div class="logo"><div class="logo-mark">🐴</div><div class="logo-text">Agro Horse <span>Express</span></div></div>
+    <div class="header-right">
+      <div class="user-chip">
+        <div class="dot"></div>
+        <span id="header-username">—</span>
+        <button onclick="switchUser()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:11px;padding:0 0 0 6px;font-family:'IBM Plex Sans',sans-serif;" onmouseover="this.style.color='var(--gold)'" onmouseout="this.style.color='var(--text-muted)'">↩ cambiar</button>
+      </div>
+      <nav>
+        <button class="active" onclick="showView('dashboard',this)">Inicio</button>
+        <button onclick="showView('nueva',this)">+ Nueva</button>
+        <button onclick="showView('historial',this)" id="nav-historial">Historial</button>
+        <button onclick="showView('resumen',this)">Resumen</button>
+      </nav>
+      <button class="logout-btn" onclick="doLogout()">Salir</button>
+    </div>
+  </header>
+
+  <main>
+    <!-- DASHBOARD -->
+    <div id="view-dashboard" class="view active">
+      <div class="page-header">
+        <div><h1 id="dash-greeting">Bienvenido</h1><p id="dash-date">—</p></div>
+        <button onclick="loadData(true)" style="background:none;border:1px solid var(--border);color:var(--text-muted);padding:6px 12px;border-radius:var(--radius);font-size:11px;cursor:pointer;font-family:'IBM Plex Sans',sans-serif;letter-spacing:0.5px;text-transform:uppercase;transition:all 0.15s" onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-muted)'">↻ Actualizar</button>
+      </div>
+      <div class="dash-grid" id="dash-stats"></div>
+      <div class="section-title">Órdenes Activas</div>
+      <div class="pending-list" id="dash-pending"></div>
+      <div class="section-title">Gasto Últimos 6 Meses</div>
+      <div class="chart-wrap"><div class="chart-bars" id="dash-chart"></div></div>
+    </div>
+
+    <!-- NUEVA -->
+    <div id="view-nueva" class="view">
+      <div class="page-header"><div><h1>Nueva Orden de Compra</h1><p>Registra todos los detalles para mantener un historial claro.</p></div></div>
+      <div class="form-card">
+        <div class="form-section">
+          <div class="section-label">Tipo de Compra</div>
+          <div class="form-grid">
+            <div class="form-group full">
+              <label>¿Cómo se hizo esta compra?</label>
+              <div class="tipo-group">
+                <button class="tipo-btn sel-negocio" onclick="selectTipoCompra('online',this)" id="tc-online-btn">🛒 Orden Online (Amazon/eBay/etc.)</button>
+                <button class="tipo-btn" onclick="selectTipoCompra('suplidor',this)" id="tc-suplidor-btn">🧾 Factura de Suplidor</button>
+              </div>
+              <input type="hidden" id="tipoCompra" value="online">
+              <div style="font-size:11px;color:var(--text-muted);margin-top:6px;line-height:1.5">Las facturas de suplidor llevan invoice number y fecha de pago. Las órdenes online se pagan en el momento.</div>
+            </div>
+          </div>
+        </div>
+        <div class="form-section">
+          <div class="section-label">Clasificación</div>
+          <div class="form-grid">
+            <div class="form-group full">
+              <label>¿Para quién es esta compra?</label>
+              <div class="tipo-group">
+                <button class="tipo-btn sel-negocio" onclick="selectTipo('negocio',this)">🏪 Para el Negocio</button>
+                <button class="tipo-btn" onclick="selectTipo('cliente',this)">👤 Para un Cliente</button>
+              </div>
+              <input type="hidden" id="tipo" value="negocio">
+            </div>
+            <div class="form-group full" id="grupo-cliente" style="display:none">
+              <label>Nombre del Cliente</label>
+              <input type="text" id="cliente" placeholder="Ej: Juan Rivera">
+            </div>
+            <div class="form-group">
+              <label>Categoría</label>
+              <select id="categoria">
+                <option value="">Seleccionar...</option>
+                <option>Piezas</option>
+                <option>Alimentos y Vitaminas</option>
+                <option>Equipo</option>
+                <option>Otro</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Estado</label>
+              <select id="estado"><option>Pendiente</option><option>Ordenado</option><option>Recibido</option></select>
+            </div>
+          </div>
+        </div>
+        <div class="form-section">
+          <div class="section-label">Detalle</div>
+          <div class="form-grid">
+            <div class="form-group full"><label>¿Qué se pidió?</label><textarea id="descripcion" placeholder="Ej: Filtro de aire Stihl FS 55"></textarea></div>
+            <div class="form-group" id="grupo-partnumber"><label>Part Number (opcional)</label><input type="text" id="partnumber" placeholder="Ej: 4140-141-0300"></div>
+            <div class="form-group"><label>Cantidad</label><input type="number" id="cantidad" min="1" value="1" placeholder="1"></div>
+            <div class="form-group full"><label>¿Por qué se pidió?</label><textarea id="razon" placeholder="Ej: Stock bajo. / Cliente trajo equipo para reparación." style="min-height:52px"></textarea></div>
+          </div>
+        </div>
+        <div class="form-section">
+          <div class="section-label">Proveedor y Costo</div>
+          <div class="form-grid">
+            <div class="form-group" id="grupo-donde">
+              <label>¿Dónde se compró?</label>
+              <select id="donde">
+                <option value="">Seleccionar...</option>
+                <option>Amazon</option><option>eBay</option><option>Walmart</option>
+                <option>Home Depot</option><option>Ferretería Local</option>
+                <option>Llamada / Teléfono</option><option>Directamente al suplidor</option><option>Otro</option>
+              </select>
+            </div>
+            <div class="form-group" id="grupo-suplidor-dropdown" style="display:none">
+              <label>Suplidor</label>
+              <select id="suplidor-dropdown" onchange="onSuplidorDropdownChange()">
+                <option value="">Seleccionar suplidor...</option>
+              </select>
+            </div>
+            <div class="form-group" id="grupo-invoice" style="display:none"><label>Invoice Number</label><input type="text" id="invoiceNumber" placeholder="Ej: INV-00523"></div>
+            <div class="form-group"><label>Costo Total ($)</label><input type="number" id="costo" placeholder="0.00" step="0.01" min="0"></div>
+            <div class="form-group" id="grupo-fecha"><label>Fecha</label><input type="date" id="fecha"></div>
+            <div class="form-group" id="grupo-fecha-factura" style="display:none"><label>Fecha de Factura</label><input type="date" id="fechaFactura"></div>
+            <div class="form-group" id="grupo-fecha-pago" style="display:none"><label>Fecha Límite de Pago</label><input type="date" id="fechaPago"></div>
+            <div class="form-group" id="grupo-estado-pago" style="display:none">
+              <label>Estado de Pago</label>
+              <select id="estadoPago"><option>Pendiente</option><option>Pagada</option></select>
+            </div>
+            <div class="form-group full" id="grupo-tracking"><label>Número de Tracking</label><input type="text" id="tracking" placeholder="Ej: 1Z999AA10123456784"></div>
+            <div class="form-group full">
+              <label>Fotos / Documentos (opcional)</label>
+              <div id="foto-upload-area" style="border:2px dashed var(--border-light);border-radius:var(--radius);padding:20px;text-align:center;cursor:pointer;transition:all 0.15s;" onclick="document.getElementById('foto-input').click()" ondragover="event.preventDefault();this.style.borderColor='var(--gold)'" ondragleave="this.style.borderColor='var(--border-light)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-light)';handleFotoFiles(event.dataTransfer.files)">
+                <div style="font-size:24px;margin-bottom:6px;opacity:0.5">📎</div>
+                <div style="font-size:12px;color:var(--text-muted)">Toca para seleccionar o arrastra — fotos, PDFs, documentos</div>
+              </div>
+              <input type="file" id="foto-input" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" multiple style="display:none" onchange="handleFotoFiles(this.files)">
+              <div id="foto-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div>
+            </div>
+          </div>
+        </div>
+        <div class="form-footer">
+          <button class="submit-btn" id="submit-btn" onclick="guardarCompra()">Registrar Orden de Compra</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORIAL + SUPLIDORES -->
+    <div id="view-historial" class="view">
+      <div style="display:flex;margin-bottom:20px;border-bottom:1px solid var(--border);flex-wrap:wrap">
+        <button id="htab-ordenes" onclick="switchHistorialTab('ordenes')" style="background:none;border:none;border-bottom:2px solid var(--gold);color:var(--gold);padding:10px 18px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;cursor:pointer;margin-bottom:-1px;">Órdenes Online</button>
+        <button id="htab-facturas" onclick="switchHistorialTab('facturas')" style="background:none;border:none;border-bottom:2px solid transparent;color:var(--text-muted);padding:10px 18px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:500;letter-spacing:1px;text-transform:uppercase;cursor:pointer;margin-bottom:-1px;transition:all 0.15s;">Facturas Suplidores</button>
+        <button id="htab-todo" onclick="switchHistorialTab('todo')" style="background:none;border:none;border-bottom:2px solid transparent;color:var(--text-muted);padding:10px 18px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:500;letter-spacing:1px;text-transform:uppercase;cursor:pointer;margin-bottom:-1px;transition:all 0.15s;">Todo</button>
+        <button id="htab-suplidores" onclick="switchHistorialTab('suplidores')" style="background:none;border:none;border-bottom:2px solid transparent;color:var(--text-muted);padding:10px 18px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:500;letter-spacing:1px;text-transform:uppercase;cursor:pointer;margin-bottom:-1px;transition:all 0.15s;">Suplidores</button>
+      </div>
+
+      <!-- ÓRDENES TAB -->
+      <div id="htab-content-ordenes">
+        <div class="historial-top">
+          <div><p style="color:var(--text-muted);font-size:13px;font-weight:300">Consulta y actualiza todas las órdenes.</p></div>
+          <div class="filters">
+            <select id="filtro-mes" onchange="renderHistorial()"><option value="">Todos los meses</option></select>
+            <select id="filtro-tipo" onchange="renderHistorial()"><option value="">Negocio + Clientes</option><option value="negocio">Solo Negocio</option><option value="cliente">Solo Clientes</option></select>
+            <select id="filtro-cat" onchange="renderHistorial()"><option value="">Todas las categorías</option></select>
+            <select id="filtro-estado" onchange="renderHistorial()"><option value="">Todos los estados</option><option>Pendiente</option><option>Ordenado</option><option>Recibido</option></select>
+            <input type="text" id="filtro-buscar" placeholder="🔍 Buscar..." oninput="renderHistorial()">
+            <button onclick="exportarExcel()" style="background:var(--navy-700);border:1px solid var(--border-light);color:var(--gold);padding:7px 14px;border-radius:var(--radius);font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all 0.15s;" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border-light)'">📥 Exportar Excel</button>
+          </div>
+        </div>
+        <div class="stats-row" id="stats-row"></div>
+        <div id="totals-bar" style="background:var(--navy-700);border:1px solid var(--border-light);border-radius:var(--radius);padding:12px 18px;margin-bottom:16px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;"></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Orden</th><th>Descripción</th><th>Part #</th><th>Tipo</th><th>Categoría</th><th>Costo</th><th>Dónde</th><th>Tracking</th><th>Estado</th><th></th></tr></thead>
+            <tbody id="tabla-body"></tbody>
+          </table>
+          <div id="empty-state" class="empty-state" style="display:none"><div class="icon">📋</div><p>No hay órdenes registradas.</p></div>
+        </div>
+      </div>
+
+      <!-- FACTURAS SUPLIDORES TAB -->
+      <div id="htab-content-facturas" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+          <p style="color:var(--text-muted);font-size:13px;font-weight:300">Cuentas por pagar — facturas de suplidores con fecha de vencimiento.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <select id="fact-filtro-sup" onchange="renderFacturas()" style="background:var(--navy-800);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:7px 10px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;outline:none;"><option value="">Todos los suplidores</option></select>
+            <select id="fact-filtro-estado" onchange="renderFacturas()" style="background:var(--navy-800);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:7px 10px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;outline:none;">
+              <option value="">Todos los estados</option>
+              <option value="Pendiente">Pendiente</option>
+              <option value="Pagada">Pagada</option>
+              <option value="Vencida">Vencida</option>
+            </select>
+          </div>
+        </div>
+        <div class="stats-row" id="fact-stats-row"></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Suplidor</th><th>Invoice</th><th>Fecha Factura</th><th>Vence</th><th>Descripción</th><th>Monto</th><th>Estado Pago</th><th></th></tr></thead>
+            <tbody id="facturas-body"></tbody>
+          </table>
+          <div id="facturas-empty" class="empty-state" style="display:none"><div class="icon">🧾</div><p>No hay facturas de suplidores registradas.</p></div>
+        </div>
+      </div>
+
+      <!-- TODO TAB (combined + category breakdown) -->
+      <div id="htab-content-todo" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+          <p style="color:var(--text-muted);font-size:13px;font-weight:300">Vista combinada — órdenes online y facturas de suplidores, desglosadas por categoría.</p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <select id="todo-filtro-mes" onchange="renderTodo()" style="background:var(--navy-800);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:7px 10px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;outline:none;"><option value="">Todos los meses</option></select>
+            <select id="todo-filtro-cat" onchange="renderTodo()" style="background:var(--navy-800);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:7px 10px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;outline:none;"><option value="">Todas las categorías</option></select>
+          </div>
+        </div>
+        <div class="stats-row" id="todo-stats-row"></div>
+        <div id="todo-cat-breakdown" style="background:var(--navy-800);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px"></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Orden</th><th>Descripción</th><th>Categoría</th><th>Tipo</th><th>Suplidor / Origen</th><th>Costo</th></tr></thead>
+            <tbody id="todo-body"></tbody>
+          </table>
+          <div id="todo-empty" class="empty-state" style="display:none"><div class="icon">📋</div><p>No hay órdenes para este filtro.</p></div>
+        </div>
+      </div>
+
+      <!-- SUPLIDORES TAB (entidades) -->
+      <div id="htab-content-suplidores" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+          <p style="color:var(--text-muted);font-size:13px;font-weight:300">Lista de suplidores con su contacto y notas.</p>
+          <button onclick="openSuplidorModal(null)" style="background:var(--gold);border:none;color:var(--navy-900);padding:8px 16px;border-radius:var(--radius);font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:1px;text-transform:uppercase;">+ Nuevo Suplidor</button>
+        </div>
+        <div id="suplidores-entidades-content"></div>
+      </div>
+    </div>
+
+    <!-- RESUMEN -->
+    <div id="view-resumen" class="view">
+      <div class="page-header"><div><h1>Resumen Mensual</h1><p>Desglose de gastos por mes y categoría.</p></div></div>
+      <div id="resumen-content"></div>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL SUPLIDOR (entidad) -->
+<div class="modal-overlay" id="modal-sup-overlay" onclick="closeSupModalOutside(event)">
+  <div class="modal">
+    <div class="modal-header"><h2 id="modal-sup-title">Nuevo Suplidor</h2></div>
+    <div class="modal-body">
+      <div class="form-group"><label>Nombre</label><input type="text" id="sup-nombre" placeholder="Ej: Tractor Supply"></div>
+      <div class="form-group"><label>Contacto (opcional)</label><input type="text" id="sup-contacto" placeholder="Teléfono, email, persona"></div>
+      <div class="form-group"><label>Notas (opcional)</label><textarea id="sup-notas" placeholder="Ej: Normalmente da 30 días de crédito" style="min-height:60px"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-delete" id="sup-btn-delete" onclick="eliminarSuplidor()" style="display:none">Eliminar</button>
+      <button class="btn-cancel" onclick="closeSupModal()">Cancelar</button>
+      <button class="btn-save" onclick="guardarSuplidor()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-header"><h2>Editar Orden</h2></div>
+    <div class="modal-body">
+      <div class="form-group" id="edit-grupo-cliente" style="display:none"><label>Nombre del Cliente</label><input type="text" id="edit-cliente" placeholder="Ej: Juan Rivera"></div>
+      <div class="form-group"><label>Descripción</label><textarea id="edit-descripcion" style="min-height:65px"></textarea></div>
+      <div class="form-group"><label>Part Number</label><input type="text" id="edit-partnumber" placeholder="Ej: 4140-141-0300"></div>
+      <div class="form-group"><label>Cantidad</label><input type="number" id="edit-cantidad" min="1" value="1"></div>
+      <div class="form-group"><label>Razón</label><textarea id="edit-razon" style="min-height:48px"></textarea></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label>Categoría</label>
+          <select id="edit-cat">
+            <option value="">Sin categoría</option>
+            <option>Piezas</option>
+            <option>Alimentos y Vitaminas</option>
+            <option>Equipo</option>
+            <option>Otro</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Costo ($)</label><input type="number" id="edit-costo" step="0.01"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label>Suplidor</label><input type="text" id="edit-suplidor"></div>
+        <div class="form-group"><label>¿Dónde se compró?</label>
+          <select id="edit-donde">
+            <option value="">Seleccionar...</option>
+            <option>Amazon</option><option>eBay</option><option>Walmart</option>
+            <option>Home Depot</option><option>Ferretería Local</option>
+            <option>Llamada / Teléfono</option><option>Directamente al suplidor</option><option>Otro</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label>Estado</label><select id="edit-estado" onchange="toggleNotaField()"><option>Pendiente</option><option>Ordenado</option><option>Recibido</option></select></div>
+      </div>
+      <div id="edit-factura-fields" style="display:none;border-top:1px dashed var(--border);padding-top:12px;margin-top:4px">
+        <div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold);margin-bottom:8px">Datos de Factura</div>
+        <div class="form-group"><label>Invoice Number</label><input type="text" id="edit-invoiceNumber" placeholder="Ej: INV-00523"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px">
+          <div class="form-group"><label>Fecha Factura</label><input type="date" id="edit-fechaFactura"></div>
+          <div class="form-group"><label>Fecha Límite Pago</label><input type="date" id="edit-fechaPago"></div>
+        </div>
+        <div class="form-group" style="margin-top:10px"><label>Estado de Pago</label>
+          <select id="edit-estadoPago"><option>Pendiente</option><option>Pagada</option></select>
+        </div>
+      </div>
+      <div class="form-group"><label>Tracking</label><input type="text" id="edit-tracking"></div>
+      <div class="form-group">
+        <label>Fotos / Documentos</label>
+        <div id="edit-fotos-existentes" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px"></div>
+        <div style="border:2px dashed var(--border-light);border-radius:var(--radius);padding:14px;text-align:center;cursor:pointer;transition:all 0.15s;" onclick="document.getElementById('edit-foto-input').click()" ondragover="event.preventDefault();this.style.borderColor='var(--gold)'" ondragleave="this.style.borderColor='var(--border-light)'" ondrop="event.preventDefault();this.style.borderColor='var(--border-light)';handleEditFotoFiles(event.dataTransfer.files)">
+          <div style="font-size:12px;color:var(--text-muted)">📎 Añadir foto o documento</div>
+        </div>
+        <input type="file" id="edit-foto-input" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx" multiple style="display:none" onchange="handleEditFotoFiles(this.files)">
+        <div id="edit-foto-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div>
+      </div>
+      <div class="form-group" id="nota-field" style="display:none">
+        <label>Nota al cambiar estado</label>
+        <textarea id="edit-nota" placeholder="Ej: Llegó incompleto. / Llegó con daño." style="min-height:52px"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-delete" onclick="eliminarCompra()">Eliminar</button>
+      <button class="btn-cancel" onclick="closeModalBtn()">Cancelar</button>
+      <button class="btn-save" id="btn-save-edit" onclick="guardarEdicion()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+
+const FB = {
+  apiKey:"AIzaSyCqQ32JY-O39R7_9pMnTEahDXb8MiIGuKg",
+  authDomain:"agro-horse-express.firebaseapp.com",
+  projectId:"agro-horse-express",
+  storageBucket:"agro-horse-express.firebasestorage.app",
+  messagingSenderId:"639675792604",
+  appId:"1:639675792604:web:5f6862e03776834ea88819"
+};
+const app = initializeApp(FB);
+const db = getFirestore(app);
+const storage = getStorage(app);
+
+const SESSION_KEY = 'agro_session_v3';
+const PROFILE_KEY = 'agro_profile_v3';
+const VIEW_KEY = 'agro_view_v3';
+const CATS = ['Piezas','Alimentos y Vitaminas','Equipo','Otro'];
+
+let compras = [];
+let suplidoresEntidades = [];
+let editIndex = null;
+let editSupId = null;
+let prevEstado = null;
+let currentHistorialTab = 'ordenes';
+
+// Helper: días entre dos fechas YYYY-MM-DD (b - a, negativo si b < a)
+function diasEntre(a,b){
+  if(!a||!b)return null;
+  var da=new Date(a+'T12:00:00'),db=new Date(b+'T12:00:00');
+  return Math.round((db-da)/(1000*60*60*24));
+}
+function hoyISO(){return new Date().toISOString().split('T')[0];}
+// Compatibilidad: compras viejas sin tipoCompra se infieren por 'donde' y 'suplidor'
+const ONLINE_SOURCES=['amazon','ebay','walmart','home depot'];
+function getTipoCompra(c){
+  if(c.tipoCompra)return c.tipoCompra;
+  var d=(c.donde||'').toLowerCase().trim();
+  if(ONLINE_SOURCES.indexOf(d)!==-1)return 'online';
+  if(c.suplidor && c.suplidor.trim())return 'suplidor';
+  return 'online';
+}
+// Estado efectivo de pago (calcula "Vencida" on-the-fly)
+function estadoPagoEfectivo(c){
+  if(getTipoCompra(c)!=='suplidor')return null;
+  if(c.estadoPago==='Pagada')return 'Pagada';
+  if(c.fechaPago && c.fechaPago<hoyISO())return 'Vencida';
+  return 'Pendiente';
+}
+
+// ── UTILS ──
+function showLoading(msg){document.getElementById('loading-text').textContent=msg||'Cargando...';document.getElementById('loading-overlay').classList.remove('hidden');}
+function hideLoading(){document.getElementById('loading-overlay').classList.add('hidden');}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3500);}
+function showErr(el,msg){el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),4000);}
+window.togglePw=function(id,btn){const el=document.getElementById(id);el.type=el.type==='password'?'text':'password';btn.textContent=el.type==='password'?'👁':'🙈';}
+window.checkStrength=function(){
+  const pw=document.getElementById('setup-pw1').value,fill=document.getElementById('strength-fill');
+  let s=0;if(pw.length>=6)s++;if(pw.length>=10)s++;if(/[A-Z]/.test(pw))s++;if(/[0-9]/.test(pw))s++;if(/[^A-Za-z0-9]/.test(pw))s++;
+  const c=['#c05050','#d4a040','#d4a040','#4caf82','#c8a84b'],w=['20%','40%','60%','80%','100%'];
+  fill.style.width=pw?w[Math.min(s,4)]:'0%';fill.style.background=pw?c[Math.min(s,4)]:'transparent';
+}
+
+// ── AUTH ──
+async function hashPw(pw){
+  const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pw+'AgroHorse2024'));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function getStoredHash(){
+  for(let i=0;i<3;i++){
+    try{const snap=await getDoc(doc(db,'config','auth'));return snap.exists()?snap.data().pwHash:null;}
+    catch(e){if(i<2)await new Promise(r=>setTimeout(r,800));}
+  }
+  return null;
+}
+
+window.createPassword=async function(){
+  const pw1=document.getElementById('setup-pw1').value,pw2=document.getElementById('setup-pw2').value,err=document.getElementById('setup-error');
+  if(pw1.length<4){showErr(err,'La contraseña debe tener al menos 4 caracteres.');return;}
+  if(pw1!==pw2){showErr(err,'Las contraseñas no coinciden.');return;}
+  showLoading('Guardando contraseña...');
+  try{
+    await setDoc(doc(db,'config','auth'),{pwHash:await hashPw(pw1)});
+    localStorage.setItem(SESSION_KEY,'ok');
+    document.getElementById('screen-setup').classList.add('hidden');
+    await showProfileScreen();
+  }catch(e){showErr(document.getElementById('setup-error'),'Error al guardar. Verifica tu conexión.');}
+  finally{hideLoading();}
+}
+
+window.doLogin=async function(){
+  const pw=document.getElementById('login-pw').value,err=document.getElementById('login-error');
+  showLoading('Verificando...');
+  try{
+    const stored=await getStoredHash();
+    if(!stored){hideLoading();showErr(err,'No hay contraseña registrada. Crea una primero.');return;}
+    if(await hashPw(pw)===stored){
+      localStorage.setItem(SESSION_KEY,'ok');
+      document.getElementById('screen-login').classList.add('hidden');
+      await showProfileScreen();
+    }else{
+      showErr(err,'Contraseña incorrecta.');
+      document.getElementById('login-pw').value='';
+    }
+  }catch(e){showErr(err,'Error de conexión. Intenta de nuevo.');}
+  finally{hideLoading();}
+}
+
+window.doLogout=function(){
+  localStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(VIEW_KEY);
+  document.getElementById('app').style.display='none';
+  document.getElementById('screen-login').classList.remove('hidden');
+  document.getElementById('login-pw').value='';
+}
+
+window.showSetup=function(){
+  document.getElementById('screen-login').classList.add('hidden');
+  document.getElementById('screen-setup').classList.remove('hidden');
+}
+
+// ── EMPLEADOS ──
+async function getPresets(){
+  for(let i=0;i<3;i++){
+    try{const snap=await getDoc(doc(db,'config','empleados'));return snap.exists()?(snap.data().lista||[]).filter(n=>n&&n.trim()):[]; }
+    catch(e){if(i<2)await new Promise(r=>setTimeout(r,800));}
+  }
+  return[];
+}
+async function savePresets(lista){
+  for(let i=0;i<3;i++){
+    try{await setDoc(doc(db,'config','empleados'),{lista:lista.filter(n=>n&&n.trim())});return;}
+    catch(e){if(i===2)throw e;await new Promise(r=>setTimeout(r,800));}
+  }
+}
+
+async function showProfileScreen(){
+  document.getElementById('screen-profile').classList.remove('hidden');
+  document.getElementById('preset-list').innerHTML='<div style="font-size:12px;color:var(--text-muted)">Cargando empleados...</div>';
+  await renderPresets();
+}
+
+async function renderPresets(){
+  const presets=await getPresets();
+  const container=document.getElementById('preset-list');
+  if(!presets.length){container.innerHTML='<div style="font-size:12px;color:var(--text-muted);padding:4px 0">Aún no hay nombres. Agrega el primero abajo.</div>';return;}
+  container.innerHTML=presets.map(name=>`<button class="preset-btn"
+    onclick="selectPreset('${name.replace(/'/g,"\\'")}')"
+    oncontextmenu="deletePreset(event,'${name.replace(/'/g,"\\'")}');return false"
+    ontouchstart="startLongPress(event,'${name.replace(/'/g,"\\'")}')"
+    ontouchend="cancelLongPress()"
+    ontouchmove="cancelLongPress()">${name}</button>`).join('');
+}
+
+window.addPreset=async function(){
+  const input=document.getElementById('profile-name'),name=input.value.trim(),err=document.getElementById('profile-error');
+  if(!name){showErr(err,'Escribe un nombre.');return;}
+  showLoading('Guardando empleado...');
+  try{
+    const presets=await getPresets();
+    if(!presets.includes(name)){presets.push(name);await savePresets(presets);}
+    input.value='';hideLoading();selectPreset(name);
+  }catch(e){hideLoading();showErr(err,'Error al guardar. Verifica tu conexión.');}
+}
+
+window.selectPreset=function(name){
+  cancelLongPress();
+  localStorage.setItem(PROFILE_KEY,name);
+  document.getElementById('screen-profile').classList.add('hidden');
+  showApp(name);
+}
+
+window.deletePreset=async function(e,name){
+  if(e&&e.preventDefault)e.preventDefault();
+  if(!confirm('¿Eliminar a "'+name+'"?'))return;
+  showLoading('Eliminando...');
+  try{const presets=await getPresets();await savePresets(presets.filter(p=>p!==name));await renderPresets();}
+  catch(e){showToast('Error al eliminar.');}
+  finally{hideLoading();}
+}
+
+let longPressTimer=null;
+window.startLongPress=function(e,name){longPressTimer=setTimeout(function(){deletePreset(e,name);},700);}
+window.cancelLongPress=function(){if(longPressTimer){clearTimeout(longPressTimer);longPressTimer=null;}}
+
+window.switchUser=function(){
+  document.getElementById('app').style.display='none';
+  showProfileScreen();
+}
+
+function showApp(name){
+  document.getElementById('header-username').textContent=name;
+  document.getElementById('app').style.display='block';
+  document.getElementById('fecha').value=new Date().toISOString().split('T')[0];
+  const lastView=localStorage.getItem(VIEW_KEY)||'dashboard';
+  loadData().then(function(){showView(lastView);});
+}
+
+// ── FIREBASE COMPRAS ──
+let autoImportDone=false;
+async function autoImportSuplidoresDesdeCompras(){
+  if(autoImportDone)return;
+  autoImportDone=true;
+  var existing=new Set(suplidoresEntidades.map(function(s){return (s.nombre||'').trim().toLowerCase();}));
+  var nuevos={};
+  compras.forEach(function(c){
+    if(getTipoCompra(c)!=='suplidor')return;
+    var nombre=(c.suplidor||'').trim();
+    if(!nombre)return;
+    if(existing.has(nombre.toLowerCase()))return;
+    if(!nuevos[nombre.toLowerCase()])nuevos[nombre.toLowerCase()]=nombre;
+  });
+  var nombresNuevos=Object.values(nuevos);
+  if(!nombresNuevos.length)return;
+  console.log('Importando '+nombresNuevos.length+' suplidores desde órdenes existentes:',nombresNuevos);
+  for(var i=0;i<nombresNuevos.length;i++){
+    try{
+      await addDoc(collection(db,'suplidores'),{
+        nombre:nombresNuevos[i],
+        contacto:'',
+        notas:'Importado automáticamente desde órdenes existentes.',
+        creadoEn:new Date().toISOString()
+      });
+    }catch(e){console.error('No se pudo importar suplidor',nombresNuevos[i],e);}
+  }
+  // Re-cargar suplidores entidades
+  try{
+    var supSnap=await getDocs(collection(db,'suplidores'));
+    suplidoresEntidades=supSnap.docs.map(function(d){return Object.assign({},d.data(),{firebaseId:d.id});});
+    suplidoresEntidades.sort(function(a,b){return (a.nombre||'').localeCompare(b.nombre||'');});
+    refreshSuplidorDropdown();
+  }catch(e){}
+  showToast('✓ '+nombresNuevos.length+' suplidor(es) importado(s)');
+}
+
+async function loadData(showMsg){
+  showLoading(showMsg?'Actualizando...':'Cargando órdenes...');
+  try{
+    const q=query(collection(db,'compras'),orderBy('num','asc'));
+    const snap=await getDocs(q);
+    compras=snap.docs.map(d=>Object.assign({},d.data(),{firebaseId:d.id}));
+    try{
+      const supSnap=await getDocs(collection(db,'suplidores'));
+      suplidoresEntidades=supSnap.docs.map(d=>Object.assign({},d.data(),{firebaseId:d.id}));
+      suplidoresEntidades.sort(function(a,b){return (a.nombre||'').localeCompare(b.nombre||'');});
+    }catch(e){suplidoresEntidades=[];}
+    await autoImportSuplidoresDesdeCompras();
+    renderDashboard();
+    updateNavBadge();
+    refreshSuplidorDropdown();
+    buildFilters();
+    renderHistorial();
+    buildFacturasFilters();
+    if(showMsg)showToast('✓ Datos actualizados');
+  }catch(e){showToast('Error al cargar datos.');console.error(e);}
+  finally{hideLoading();}
+}
+
+window.guardarCompra=async function(){
+  const desc=document.getElementById('descripcion').value.trim();
+  if(!desc){alert('Por favor describe qué se pidió.');return;}
+  const emp=localStorage.getItem(PROFILE_KEY)||'—';
+  const btn=document.getElementById('submit-btn');
+  btn.disabled=true;btn.textContent='Guardando...';
+  showLoading('Guardando orden...');
+  try{
+    const tipoCompra=document.getElementById('tipoCompra').value;
+    const suplidorNombre=tipoCompra==='suplidor'
+      ? document.getElementById('suplidor-dropdown').value
+      : '';
+    if(tipoCompra==='suplidor' && !suplidorNombre){alert('Selecciona un suplidor.');btn.disabled=false;btn.textContent='Registrar Orden de Compra';hideLoading();return;}
+    const orden={
+      num:compras.length+1,
+      tipoCompra:tipoCompra,
+      tipo:document.getElementById('tipo').value,
+      cliente:document.getElementById('cliente').value.trim(),
+      descripcion:desc,
+      partnumber:document.getElementById('partnumber').value.trim(),
+      cantidad:parseInt(document.getElementById('cantidad').value)||1,
+      razon:document.getElementById('razon').value.trim(),
+      categoria:document.getElementById('categoria').value,
+      empleado:emp,
+      fecha:tipoCompra==='suplidor' ? (document.getElementById('fechaFactura').value||hoyISO()) : document.getElementById('fecha').value,
+      suplidor:suplidorNombre,
+      donde:tipoCompra==='suplidor' ? 'Directamente al suplidor' : document.getElementById('donde').value,
+      costo:parseFloat(document.getElementById('costo').value)||0,
+      tracking:document.getElementById('tracking').value.trim(),
+      estado:document.getElementById('estado').value,
+      invoiceNumber:tipoCompra==='suplidor' ? document.getElementById('invoiceNumber').value.trim() : '',
+      fechaFactura:tipoCompra==='suplidor' ? document.getElementById('fechaFactura').value : '',
+      fechaPago:tipoCompra==='suplidor' ? document.getElementById('fechaPago').value : '',
+      estadoPago:tipoCompra==='suplidor' ? document.getElementById('estadoPago').value : '',
+      notas:'',
+      fotos:[],
+      creadoEn:new Date().toISOString()
+    };
+    if(fotoFiles.length){
+      showLoading('Subiendo fotos...');
+      orden.fotos=await uploadFotos(fotoFiles,orden.num);
+    }
+    await addDoc(collection(db,'compras'),orden);
+    fotoFiles=[];
+    await loadData();
+    resetForm();
+    showToast('✓ Orden #'+orden.num+' guardada');
+    showView('dashboard');
+  }catch(e){showToast('Error: '+e.message);console.error(e);}
+  finally{btn.disabled=false;btn.textContent='Registrar Orden de Compra';hideLoading();}
+}
+
+window.guardarEdicion=async function(){
+  if(editIndex===null)return;
+  const c=compras[editIndex];
+  const btnSave=document.getElementById('btn-save-edit');
+  btnSave.disabled=true;
+  showLoading('Actualizando...');
+  const newEstado=document.getElementById('edit-estado').value;
+  const nota=document.getElementById('edit-nota').value.trim();
+  const notasActuales=c.notas||'';
+  const notasNuevas=nota?(notasActuales?notasActuales+'\n---\n'+newEstado+': '+nota:newEstado+': '+nota):notasActuales;
+  try{
+    var updatePayload={
+      cliente:document.getElementById('edit-cliente').value.trim(),
+      descripcion:document.getElementById('edit-descripcion').value,
+      partnumber:document.getElementById('edit-partnumber').value,
+      cantidad:parseInt(document.getElementById('edit-cantidad').value)||1,
+      razon:document.getElementById('edit-razon').value,
+      categoria:document.getElementById('edit-cat').value,
+      costo:parseFloat(document.getElementById('edit-costo').value)||0,
+      suplidor:document.getElementById('edit-suplidor').value,
+      donde:document.getElementById('edit-donde').value,
+      estado:newEstado,
+      tracking:document.getElementById('edit-tracking').value,
+      notas:notasNuevas
+    };
+    if(getTipoCompra(c)==='suplidor'){
+      updatePayload.invoiceNumber=document.getElementById('edit-invoiceNumber').value.trim();
+      updatePayload.fechaFactura=document.getElementById('edit-fechaFactura').value;
+      updatePayload.fechaPago=document.getElementById('edit-fechaPago').value;
+      updatePayload.estadoPago=document.getElementById('edit-estadoPago').value;
+    }
+    await updateDoc(doc(db,'compras',c.firebaseId),updatePayload);
+    // Eliminar fotos marcadas
+    for(var d=0;d<editFotosToDelete.length;d++){
+      try{var delRef=ref(storage,editFotosToDelete[d]);await deleteObject(delRef);}catch(e){}
+    }
+    var currentFotos=(c.fotos||[]).filter(function(u){return editFotosToDelete.indexOf(u)===-1;});
+    // Subir fotos nuevas
+    if(editFotoFiles.length){
+      showLoading('Subiendo fotos...');
+      var newUrls=await uploadFotos(editFotoFiles,c.num);
+      currentFotos=currentFotos.concat(newUrls);
+    }
+    await updateDoc(doc(db,'compras',c.firebaseId),{fotos:currentFotos});
+    editFotoFiles=[];
+    editFotosToDelete=[];
+    await loadData();
+    closeModalBtn();
+    showToast('✓ Orden actualizada');
+  }catch(e){showToast('Error al actualizar.');console.error(e);}
+  finally{btnSave.disabled=false;hideLoading();}
+}
+
+window.eliminarCompra=async function(){
+  if(editIndex===null)return;
+  const c=compras[editIndex];
+  if(!confirm('¿Seguro que quieres eliminar esta orden?'))return;
+  showLoading('Eliminando...');
+  try{
+    await deleteDoc(doc(db,'compras',c.firebaseId));
+    await loadData();
+    closeModalBtn();
+    showToast('Orden eliminada');
+  }catch(e){showToast('Error al eliminar.');}
+  finally{hideLoading();}
+}
+
+// ── VIEWS ──
+window.showView=function(v,btn){
+  document.querySelectorAll('.view').forEach(function(el){el.classList.remove('active');});
+  document.querySelectorAll('nav button').forEach(function(el){el.classList.remove('active');});
+  var el=document.getElementById('view-'+v);
+  if(el)el.classList.add('active');
+  if(btn)btn.classList.add('active');
+  else{var nb=document.querySelector('nav button[onclick*="\''+v+'\'"]');if(nb)nb.classList.add('active');}
+  localStorage.setItem(VIEW_KEY,v);
+  if(v==='historial'){buildFilters();buildFacturasFilters();renderHistorial();}
+  if(v==='dashboard')renderDashboard();
+  if(v==='resumen')renderResumen();
+}
+
+window.switchHistorialTab=function(tab){
+  currentHistorialTab=tab;
+  document.getElementById('htab-content-ordenes').style.display=tab==='ordenes'?'block':'none';
+  document.getElementById('htab-content-facturas').style.display=tab==='facturas'?'block':'none';
+  document.getElementById('htab-content-todo').style.display=tab==='todo'?'block':'none';
+  document.getElementById('htab-content-suplidores').style.display=tab==='suplidores'?'block':'none';
+  var btns={ordenes:document.getElementById('htab-ordenes'),facturas:document.getElementById('htab-facturas'),todo:document.getElementById('htab-todo'),suplidores:document.getElementById('htab-suplidores')};
+  Object.keys(btns).forEach(function(k){
+    var b=btns[k];
+    if(k===tab){b.style.borderBottom='2px solid var(--gold)';b.style.color='var(--gold)';b.style.fontWeight='600';}
+    else{b.style.borderBottom='2px solid transparent';b.style.color='var(--text-muted)';b.style.fontWeight='500';}
+  });
+  if(tab==='facturas'){buildFacturasFilters();window.renderFacturas();}
+  if(tab==='todo'){buildTodoFilters();window.renderTodo();}
+  if(tab==='suplidores')window.renderSuplidoresEntidades();
+  if(tab==='ordenes')window.renderHistorial();
+}
+
+window.selectTipo=function(tipo,btn){
+  document.getElementById('tipo').value=tipo;
+  // Solo resetea los botones del grupo de Clasificación (no los de Tipo de Compra)
+  btn.parentElement.querySelectorAll('.tipo-btn').forEach(function(b){b.className='tipo-btn';});
+  btn.className='tipo-btn sel-'+tipo;
+  document.getElementById('grupo-cliente').style.display=tipo==='cliente'?'flex':'none';
+}
+
+function resetForm(){
+  ['descripcion','partnumber','razon','cliente','suplidor','tracking','invoiceNumber','fechaFactura','fechaPago'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});var cantEl=document.getElementById('cantidad');if(cantEl)cantEl.value='1';;
+  fotoFiles=[];document.getElementById('foto-preview').innerHTML='';
+  document.getElementById('costo').value='';document.getElementById('donde').value='';
+  document.getElementById('categoria').value='';document.getElementById('estado').value='Pendiente';
+  var epEl=document.getElementById('estadoPago');if(epEl)epEl.value='Pendiente';
+  var sdd=document.getElementById('suplidor-dropdown');if(sdd)sdd.value='';
+  document.getElementById('fecha').value=new Date().toISOString().split('T')[0];
+  document.getElementById('tipo').value='negocio';
+  document.getElementById('tipoCompra').value='online';
+  // Resetear botones tipo (negocio/cliente)
+  var clasifBtns=document.querySelectorAll('#view-nueva .tipo-btn');
+  clasifBtns.forEach(function(b){b.className='tipo-btn';});
+  // tc-online-btn es el primer .tipo-btn del form (en Tipo de Compra)
+  document.getElementById('tc-online-btn').className='tipo-btn sel-negocio';
+  document.getElementById('tc-suplidor-btn').className='tipo-btn';
+  // Para el segundo grupo (Clasificación: negocio/cliente), re-seleccionar negocio
+  var negocioBtn=document.querySelector('#view-nueva .tipo-btn[onclick*="negocio"]');
+  if(negocioBtn)negocioBtn.className='tipo-btn sel-negocio';
+  document.getElementById('grupo-cliente').style.display='none';
+  window.selectTipoCompra('online');
+}
+
+function updateNavBadge(){
+  var pending=compras.filter(function(c){return c.estado!=='Recibido';}).length;
+  var btn=document.getElementById('nav-historial');
+  var old=btn.querySelector('.nav-badge');if(old)old.remove();
+  if(pending>0)btn.insertAdjacentHTML('beforeend','<span class="nav-badge">'+pending+'</span>');
+}
+
+window.irAFacturas=function(){
+  showView('historial');
+  setTimeout(function(){switchHistorialTab('facturas');},50);
+}
+
+// ── DASHBOARD ──
+function renderDashboard(){
+  var now=new Date();
+  var greet=now.getHours()<12?'Buenos días':now.getHours()<18?'Buenas tardes':'Buenas noches';
+  var name=localStorage.getItem(PROFILE_KEY)||'';
+  document.getElementById('dash-greeting').textContent=greet+(name?', '+name.split(' ')[0]:'');
+  document.getElementById('dash-date').textContent=now.toLocaleDateString('es',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  var mesActual=now.toISOString().substring(0,7);
+  var delMes=compras.filter(function(c){return c.fecha&&c.fecha.startsWith(mesActual);});
+  var totalMes=delMes.reduce(function(s,c){return s+(c.costo||0);},0);
+  var pendientes=compras.filter(function(c){return c.estado==='Pendiente';});
+  var enCamino=compras.filter(function(c){return c.estado==='Ordenado';});
+  // Cuentas por pagar
+  var facturas=compras.filter(function(c){return getTipoCompra(c)==='suplidor';});
+  var porPagar=facturas.filter(function(c){return estadoPagoEfectivo(c)!=='Pagada';});
+  var totalPorPagar=porPagar.reduce(function(s,c){return s+(c.costo||0);},0);
+  var vencidasCount=porPagar.filter(function(c){return estadoPagoEfectivo(c)==='Vencida';}).length;
+  var proxCount=porPagar.filter(function(c){var d=diasEntre(hoyISO(),c.fechaPago);return d!==null&&d>=0&&d<=7;}).length;
+  var cppSub=vencidasCount>0?(vencidasCount+' vencida'+(vencidasCount>1?'s':'')):(proxCount>0?(proxCount+' próx. 7d'):(porPagar.length+' pendientes'));
+  var cppClass=vencidasCount>0?'payable':(proxCount>0?'alert':'');
+  var cppValClass=vencidasCount>0?'red':(proxCount>0?'warn':'warn');
+  document.getElementById('dash-stats').innerHTML=
+    '<div class="dash-card"><div class="dc-label">Gasto Este Mes</div><div class="dc-value">$'+totalMes.toFixed(2)+'</div><div class="dc-sub">'+delMes.length+' órdenes</div></div>'+
+    '<div class="dash-card '+cppClass+'" style="cursor:pointer" onclick="irAFacturas()"><div class="dc-label">Cuentas Por Pagar</div><div class="dc-value '+cppValClass+'">$'+totalPorPagar.toFixed(2)+'</div><div class="dc-sub">'+cppSub+'</div></div>'+
+    '<div class="dash-card '+(pendientes.length>0?'alert':'')+'"><div class="dc-label">Órdenes Pendientes</div><div class="dc-value warn">'+pendientes.length+'</div><div class="dc-sub">Sin ordenar</div></div>'+
+    '<div class="dash-card"><div class="dc-label">En Camino</div><div class="dc-value blue">'+enCamino.length+'</div><div class="dc-sub">Ordenado</div></div>';
+  var activas=pendientes.concat(enCamino).slice(0,6);
+  var pl=document.getElementById('dash-pending');
+  if(!activas.length){pl.innerHTML='<div style="text-align:center;padding:28px;color:var(--text-muted);font-size:13px">✓ No hay órdenes activas</div>';}
+  else{pl.innerHTML=activas.map(function(c){
+    var idx=compras.indexOf(c);
+    return '<div class="pending-card '+(c.estado==='Ordenado'?'ordenado':'')+'"><div class="pc-info"><div class="pc-title">'+c.descripcion+'</div><div class="pc-meta">'+c.empleado+' · '+(c.fecha||'—')+(c.categoria?' · '+c.categoria:'')+'</div></div><div class="pc-right">'+(c.costo?'<span class="price">$'+c.costo.toFixed(2)+'</span>':'')+'<span class="badge badge-'+(c.estado||'').toLowerCase()+'">'+c.estado+'</span><button class="action-btn" onclick="openModal('+idx+')">Editar</button></div></div>';
+  }).join('');}
+  var months=[];
+  for(var i=5;i>=0;i--){var d=new Date(now.getFullYear(),now.getMonth()-i,1);months.push({key:d.toISOString().substring(0,7),label:d.toLocaleDateString('es',{month:'short'})});}
+  var maxVal=Math.max.apply(null,months.map(function(m){return compras.filter(function(c){return c.fecha&&c.fecha.startsWith(m.key);}).reduce(function(s,c){return s+(c.costo||0);},0);}).concat([1]));
+  document.getElementById('dash-chart').innerHTML=months.map(function(m){
+    var total=compras.filter(function(c){return c.fecha&&c.fecha.startsWith(m.key);}).reduce(function(s,c){return s+(c.costo||0);},0);
+    var pct=Math.round((total/maxVal)*100);
+    return '<div class="chart-bar-wrap"><div class="chart-bar-val">$'+(total>=1000?(total/1000).toFixed(1)+'k':total.toFixed(0))+'</div><div class="chart-bar" style="height:'+Math.max(pct,3)+'%"></div><div class="chart-bar-label">'+m.label+'</div></div>';
+  }).join('');
+}
+
+// ── HISTORIAL ──
+function buildFilters(){
+  var mes=document.getElementById('filtro-mes');
+  var meses=compras.map(function(c){return c.fecha?c.fecha.substring(0,7):'';}).filter(function(x,i,a){return x&&a.indexOf(x)===i;}).sort().reverse();
+  mes.innerHTML='<option value="">Todos los meses</option>';
+  meses.forEach(function(m){var p=m.split('-');var label=new Date(p[0],p[1]-1).toLocaleDateString('es',{month:'long',year:'numeric'});mes.innerHTML+='<option value="'+m+'">'+label.charAt(0).toUpperCase()+label.slice(1)+'</option>';});
+  var cat=document.getElementById('filtro-cat');
+  cat.innerHTML='<option value="">Todas las categorías</option>';
+  CATS.forEach(function(c){cat.innerHTML+='<option>'+c+'</option>';});
+}
+
+function normalizar(str){ if(!str)return ''; var s=str.toString().toLowerCase().normalize('NFD'); var result=''; for(var i=0;i<s.length;i++){var code=s.charCodeAt(i);if(code<0x0300||code>0x036f)result+=s[i];} return result.trim(); }
+
+function filteredCompras(){
+  var mes=document.getElementById('filtro-mes').value;
+  var tipo=document.getElementById('filtro-tipo').value;
+  var cat=document.getElementById('filtro-cat').value;
+  var estado=document.getElementById('filtro-estado').value;
+  var q=normalizar(document.getElementById('filtro-buscar').value.trim());
+  return compras.filter(function(c){
+    if(getTipoCompra(c)==='suplidor')return false;
+    if(mes&&!(c.fecha||'').startsWith(mes))return false;
+    if(tipo&&normalizar(c.tipo)!==normalizar(tipo))return false;
+    if(cat&&normalizar(c.categoria)!==normalizar(cat))return false;
+    if(estado&&normalizar(c.estado)!==normalizar(estado))return false;
+    if(q){
+      var campos=[
+        c.descripcion, c.partnumber, c.empleado, c.suplidor, c.cliente,
+        c.tracking, c.categoria, c.razon, c.donde,
+        c.num ? 'ORD-'+String(c.num).padStart(4,'0') : ''
+      ].map(function(v){return normalizar(v);}).join(' ');
+      if(!campos.includes(q))return false;
+    }
+    return true;
+  });
+}
+
+window.renderHistorial = function renderHistorial(){
+  var data=filteredCompras(),body=document.getElementById('tabla-body'),empty=document.getElementById('empty-state');
+  var total=data.reduce(function(s,c){return s+(c.costo||0);},0);
+  var totalSup=data.filter(function(c){return c.suplidor&&c.suplidor.trim();}).reduce(function(s,c){return s+(c.costo||0);},0);
+  var totalOtras=total-totalSup;
+  var pendientes=data.filter(function(c){return c.estado==='Pendiente';}).length;
+  document.getElementById('stats-row').innerHTML=
+    '<div class="stat-card"><div class="s-label">Total General</div><div class="s-value">$'+total.toFixed(2)+'</div></div>'+
+    '<div class="stat-card"><div class="s-label">Vía Suplidores</div><div class="s-value blue">$'+totalSup.toFixed(2)+'</div></div>'+
+    '<div class="stat-card"><div class="s-label">Otras Compras</div><div class="s-value white">$'+totalOtras.toFixed(2)+'</div></div>'+
+    '<div class="stat-card"><div class="s-label">Pendientes</div><div class="s-value '+(pendientes>0?'warn':'white')+'">'+pendientes+'</div></div>';
+  var pctSup=total>0?Math.round((totalSup/total)*100):0;
+  document.getElementById('totals-bar').innerHTML=
+    '<div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-weight:600;white-space:nowrap">Desglose:</div>'+
+    '<div style="flex:1;min-width:120px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px"><span style="color:var(--text-secondary)">Suplidores</span><span style="font-family:\'IBM Plex Mono\',monospace;color:#90c0f0">$'+totalSup.toFixed(2)+' ('+pctSup+'%)</span></div><div style="background:var(--border);border-radius:2px;height:5px;overflow:hidden"><div style="height:100%;width:'+pctSup+'%;background:#5090d0;border-radius:2px;transition:width 0.4s"></div></div></div>'+
+    '<div style="flex:1;min-width:120px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px"><span style="color:var(--text-secondary)">Otras Compras</span><span style="font-family:\'IBM Plex Mono\',monospace;color:var(--text-muted)">$'+totalOtras.toFixed(2)+' ('+(100-pctSup)+'%)</span></div><div style="background:var(--border);border-radius:2px;height:5px;overflow:hidden"><div style="height:100%;width:'+(100-pctSup)+'%;background:var(--text-muted);border-radius:2px;transition:width 0.4s"></div></div></div>'+
+    '<div style="font-size:11px;color:var(--text-muted);white-space:nowrap">'+data.length+' órdenes</div>';
+  if(!data.length){body.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  var sorted=data.slice().sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');});
+  body.innerHTML=sorted.map(function(c){
+    var idx=compras.indexOf(c);
+    var fecha=c.fecha?new Date(c.fecha+'T12:00:00').toLocaleDateString('es',{day:'numeric',month:'short',year:'2-digit'}):'';
+    var estadoClass=c.estado==='Recibido'?'badge-recibido':c.estado==='Ordenado'?'badge-ordenado':'badge-pendiente';
+    return '<tr><td><div class="order-num">ORD-'+String(c.num||'?').padStart(4,'0')+'</div><div class="order-meta">'+fecha+'<br>'+c.empleado+'</div></td>'+
+      '<td class="col-desc"><div class="main">'+(c.fotos&&c.fotos.length?'<span style="margin-right:4px;cursor:pointer" title="'+c.fotos.length+' foto(s)" onclick="event.stopPropagation();openModal('+idx+')">📷</span>':'')+(c.descripcion||'').substring(0,75)+((c.descripcion||'').length>75?'…':'')+'</div><div class="sub">'+(c.cantidad&&c.cantidad>1?'<span style="color:#c8a84b;font-weight:600">x'+c.cantidad+'</span>'+(c.razon?' · ':''):'')+(c.razon?c.razon.substring(0,55)+(c.razon.length>55?'…':''):'')+'</div>'+'</td>'+
+      '<td style="font-family:\'IBM Plex Mono\',monospace;font-size:12px;color:var(--text-secondary)">'+(c.partnumber||'—')+'</td>'+
+      '<td><span class="badge badge-'+c.tipo+'">'+(c.tipo==='negocio'?'Negocio':'Cliente')+'</span>'+(c.tipo==='cliente'&&c.cliente?'<div style="font-size:11px;color:var(--text-secondary);margin-top:3px">'+c.cliente+'</div>':'')+'</td>'+
+      '<td style="color:var(--text-secondary);font-size:12px">'+(c.categoria||'—')+'</td>'+
+      '<td class="price">'+(c.costo?'$'+c.costo.toFixed(2):'—')+'</td>'+
+      '<td style="color:var(--text-secondary);font-size:12px">'+(c.donde||'—')+'</td>'+
+      '<td>'+(c.tracking?'<span class="tracking-chip">'+c.tracking.substring(0,14)+(c.tracking.length>14?'…':'')+'</span>':'—')+'</td>'+
+      '<td><span class="badge '+estadoClass+'">'+c.estado+'</span></td>'+
+      '<td><button class="action-btn" onclick="openModal('+idx+')">Editar</button></td></tr>';
+  }).join('');
+}
+
+// ── FACTURAS SUPLIDORES ──
+function buildFacturasFilters(){
+  var sel=document.getElementById('fact-filtro-sup');
+  if(!sel)return;
+  var currentVal=sel.value;
+  var nombres=compras.filter(function(c){return getTipoCompra(c)==='suplidor'&&c.suplidor;}).map(function(c){return c.suplidor;});
+  suplidoresEntidades.forEach(function(s){if(nombres.indexOf(s.nombre)===-1)nombres.push(s.nombre);});
+  nombres=nombres.filter(function(x,i,a){return a.indexOf(x)===i;}).sort();
+  sel.innerHTML='<option value="">Todos los suplidores</option>'+nombres.map(function(n){return '<option value="'+n.replace(/"/g,'&quot;')+'">'+n+'</option>';}).join('');
+  if(currentVal)sel.value=currentVal;
+}
+
+window.renderFacturas = function renderFacturas(){
+  var filSup=document.getElementById('fact-filtro-sup').value;
+  var filEstado=document.getElementById('fact-filtro-estado').value;
+  var data=compras.filter(function(c){return getTipoCompra(c)==='suplidor';});
+  if(filSup)data=data.filter(function(c){return c.suplidor===filSup;});
+  if(filEstado)data=data.filter(function(c){return estadoPagoEfectivo(c)===filEstado;});
+  // stats
+  var totalPendiente=data.filter(function(c){return estadoPagoEfectivo(c)!=='Pagada';}).reduce(function(s,c){return s+(c.costo||0);},0);
+  var totalPagado=data.filter(function(c){return estadoPagoEfectivo(c)==='Pagada';}).reduce(function(s,c){return s+(c.costo||0);},0);
+  var vencidas=data.filter(function(c){return estadoPagoEfectivo(c)==='Vencida';}).length;
+  var proximas=data.filter(function(c){var d=diasEntre(hoyISO(),c.fechaPago);return estadoPagoEfectivo(c)==='Pendiente'&&d!==null&&d>=0&&d<=7;}).length;
+  document.getElementById('fact-stats-row').innerHTML=
+    '<div class="stat-card"><div class="s-label">Por Pagar</div><div class="s-value warn">$'+totalPendiente.toFixed(2)+'</div></div>'+
+    '<div class="stat-card"><div class="s-label">Pagado</div><div class="s-value">$'+totalPagado.toFixed(2)+'</div></div>'+
+    '<div class="stat-card"><div class="s-label">Vencidas</div><div class="s-value '+(vencidas>0?'warn':'white')+'" style="color:'+(vencidas>0?'#e08080':'var(--white)')+'">'+vencidas+'</div></div>'+
+    '<div class="stat-card"><div class="s-label">Próx. 7 días</div><div class="s-value blue">'+proximas+'</div></div>';
+  var body=document.getElementById('facturas-body'),empty=document.getElementById('facturas-empty');
+  if(!data.length){body.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  // Orden: pendientes por fechaPago asc, pagadas al final
+  var sorted=data.slice().sort(function(a,b){
+    var ea=estadoPagoEfectivo(a),eb=estadoPagoEfectivo(b);
+    if(ea==='Pagada'&&eb!=='Pagada')return 1;
+    if(ea!=='Pagada'&&eb==='Pagada')return -1;
+    return (a.fechaPago||'9999').localeCompare(b.fechaPago||'9999');
+  });
+  body.innerHTML=sorted.map(function(c){
+    var idx=compras.indexOf(c);
+    var ep=estadoPagoEfectivo(c);
+    var diasRest=c.fechaPago?diasEntre(hoyISO(),c.fechaPago):null;
+    var rowClass='';
+    if(ep==='Vencida')rowClass='row-vencida';
+    else if(ep==='Pendiente'&&diasRest!==null&&diasRest<=7)rowClass='row-urgente';
+    var fFact=c.fechaFactura?new Date(c.fechaFactura+'T12:00:00').toLocaleDateString('es',{day:'numeric',month:'short',year:'2-digit'}):'—';
+    var fPago=c.fechaPago?new Date(c.fechaPago+'T12:00:00').toLocaleDateString('es',{day:'numeric',month:'short',year:'2-digit'}):'—';
+    var diasTxt='';
+    if(c.fechaPago&&ep!=='Pagada'){
+      if(diasRest<0)diasTxt='<div style="font-size:10px;color:#e08080;margin-top:2px">Vencida hace '+Math.abs(diasRest)+'d</div>';
+      else if(diasRest===0)diasTxt='<div style="font-size:10px;color:var(--warning);margin-top:2px">Vence hoy</div>';
+      else diasTxt='<div style="font-size:10px;color:var(--text-muted);margin-top:2px">En '+diasRest+'d</div>';
+    }
+    return '<tr class="'+rowClass+'">'+
+      '<td><div style="font-weight:500">'+(c.suplidor||'—')+'</div><div class="order-meta">ORD-'+String(c.num||'?').padStart(4,'0')+'</div></td>'+
+      '<td style="font-family:\'IBM Plex Mono\',monospace;font-size:12px;color:var(--text-secondary)">'+(c.invoiceNumber||'—')+'</td>'+
+      '<td style="font-size:12px;color:var(--text-secondary)">'+fFact+'</td>'+
+      '<td style="font-size:12px">'+fPago+diasTxt+'</td>'+
+      '<td class="col-desc"><div class="main">'+(c.descripcion||'').substring(0,60)+((c.descripcion||'').length>60?'…':'')+'</div></td>'+
+      '<td class="price">'+(c.costo?'$'+c.costo.toFixed(2):'—')+'</td>'+
+      '<td><select class="inline-estado" onchange="cambiarEstadoPago('+idx+',this.value)">'+
+        ['Pendiente','Pagada'].map(function(op){return '<option'+(c.estadoPago===op||(!c.estadoPago&&op==='Pendiente')?' selected':'')+'>'+op+'</option>';}).join('')+
+        '</select>'+(ep==='Vencida'?'<div style="margin-top:4px"><span class="badge badge-vencida">Vencida</span></div>':'')+'</td>'+
+      '<td><button class="action-btn" onclick="openModal('+idx+')">Editar</button></td>'+
+      '</tr>';
+  }).join('');
+}
+
+window.cambiarEstadoPago=async function(idx,nuevoEstado){
+  var c=compras[idx];
+  if(!c)return;
+  showLoading('Actualizando...');
+  try{
+    await updateDoc(doc(db,'compras',c.firebaseId),{estadoPago:nuevoEstado});
+    c.estadoPago=nuevoEstado;
+    showToast('✓ '+(nuevoEstado==='Pagada'?'Factura marcada como pagada':'Factura marcada como pendiente'));
+    window.renderFacturas();
+    renderDashboard();
+  }catch(e){showToast('Error al actualizar.');console.error(e);}
+  finally{hideLoading();}
+}
+
+// ── TODO (vista combinada con desglose por categoría) ──
+function buildTodoFilters(){
+  var mes=document.getElementById('todo-filtro-mes');
+  if(!mes)return;
+  var curMes=mes.value;
+  var meses=compras.map(function(c){return c.fecha?c.fecha.substring(0,7):'';}).filter(function(x,i,a){return x&&a.indexOf(x)===i;}).sort().reverse();
+  mes.innerHTML='<option value="">Todos los meses</option>';
+  meses.forEach(function(m){var p=m.split('-');var label=new Date(p[0],p[1]-1).toLocaleDateString('es',{month:'long',year:'numeric'});mes.innerHTML+='<option value="'+m+'">'+label.charAt(0).toUpperCase()+label.slice(1)+'</option>';});
+  if(curMes)mes.value=curMes;
+  var cat=document.getElementById('todo-filtro-cat');
+  var curCat=cat.value;
+  cat.innerHTML='<option value="">Todas las categorías</option>';
+  CATS.forEach(function(c){cat.innerHTML+='<option>'+c+'</option>';});
+  if(curCat)cat.value=curCat;
+}
+
+window.renderTodo = function renderTodo(){
+  var mes=document.getElementById('todo-filtro-mes').value;
+  var cat=document.getElementById('todo-filtro-cat').value;
+  var data=compras.slice();
+  if(mes)data=data.filter(function(c){return (c.fecha||'').startsWith(mes);});
+  if(cat)data=data.filter(function(c){return c.categoria===cat;});
+  var total=data.reduce(function(s,c){return s+(c.costo||0);},0);
+  var totalOnline=data.filter(function(c){return getTipoCompra(c)==='online';}).reduce(function(s,c){return s+(c.costo||0);},0);
+  var totalSup=data.filter(function(c){return getTipoCompra(c)==='suplidor';}).reduce(function(s,c){return s+(c.costo||0);},0);
+  document.getElementById('todo-stats-row').innerHTML=
+    '<div class="stat-card"><div class="s-label">Total</div><div class="s-value">$'+total.toFixed(2)+'</div></div>'+
+    '<div class="stat-card"><div class="s-label">Órdenes Online</div><div class="s-value white">$'+totalOnline.toFixed(2)+'</div></div>'+
+    '<div class="stat-card"><div class="s-label">Facturas Suplidores</div><div class="s-value blue">$'+totalSup.toFixed(2)+'</div></div>'+
+    '<div class="stat-card"><div class="s-label">Órdenes</div><div class="s-value warn">'+data.length+'</div></div>';
+  // Desglose por categoría
+  var catTotals=CATS.map(function(c){return {cat:c,total:data.filter(function(x){return x.categoria===c;}).reduce(function(s,x){return s+(x.costo||0);},0),count:data.filter(function(x){return x.categoria===c;}).length};});
+  var sinCat={cat:'Sin categoría',total:data.filter(function(x){return !x.categoria;}).reduce(function(s,x){return s+(x.costo||0);},0),count:data.filter(function(x){return !x.categoria;}).length};
+  if(sinCat.total>0)catTotals.push(sinCat);
+  catTotals=catTotals.filter(function(x){return x.total>0;}).sort(function(a,b){return b.total-a.total;});
+  var maxCat=catTotals.length?catTotals[0].total:1;
+  var breakdownHTML='<div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold);margin-bottom:12px">Desglose por Categoría'+(cat?' · '+cat:'')+'</div>';
+  if(!catTotals.length){
+    breakdownHTML+='<div style="color:var(--text-muted);font-size:12px;text-align:center;padding:6px">Sin datos para el filtro actual</div>';
+  }else{
+    breakdownHTML+=catTotals.map(function(x){
+      var pct=Math.round(x.total/maxCat*100);
+      var pctTotal=total>0?Math.round(x.total/total*100):0;
+      return '<div class="cat-row"><span class="cat-name">'+x.cat+'</span><div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:'+pct+'%"></div></div><span style="font-size:11px;color:var(--text-muted);margin-right:8px">'+x.count+' ord · '+pctTotal+'%</span><span class="cat-amt">$'+x.total.toFixed(2)+'</span></div>';
+    }).join('');
+  }
+  document.getElementById('todo-cat-breakdown').innerHTML=breakdownHTML;
+  // Tabla
+  var body=document.getElementById('todo-body'),empty=document.getElementById('todo-empty');
+  if(!data.length){body.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  var sorted=data.slice().sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');});
+  body.innerHTML=sorted.map(function(c){
+    var idx=compras.indexOf(c);
+    var fecha=c.fecha?new Date(c.fecha+'T12:00:00').toLocaleDateString('es',{day:'numeric',month:'short',year:'2-digit'}):'';
+    var tc=getTipoCompra(c);
+    var tipoBadge=tc==='suplidor'
+      ? '<span class="badge badge-ordenado">🧾 Suplidor</span>'
+      : '<span class="badge badge-negocio">🛒 Online</span>';
+    var origen=tc==='suplidor'?(c.suplidor||'—'):(c.donde||c.suplidor||'—');
+    return '<tr onclick="openModal('+idx+')" style="cursor:pointer">'+
+      '<td><div class="order-num">ORD-'+String(c.num||'?').padStart(4,'0')+'</div><div class="order-meta">'+fecha+'</div></td>'+
+      '<td class="col-desc"><div class="main">'+(c.descripcion||'').substring(0,70)+((c.descripcion||'').length>70?'…':'')+'</div></td>'+
+      '<td style="color:var(--text-secondary);font-size:12px">'+(c.categoria||'—')+'</td>'+
+      '<td>'+tipoBadge+'</td>'+
+      '<td style="color:var(--text-secondary);font-size:12px">'+origen+'</td>'+
+      '<td class="price">'+(c.costo?'$'+c.costo.toFixed(2):'—')+'</td>'+
+      '</tr>';
+  }).join('');
+}
+
+// ── SUPLIDORES ENTIDADES (CRUD) ──
+window.renderSuplidoresEntidades = function renderSuplidoresEntidades(){
+  var container=document.getElementById('suplidores-entidades-content');
+  if(!suplidoresEntidades.length){
+    container.innerHTML='<div class="empty-state"><div class="icon">🏭</div><p>No hay suplidores registrados. Toca "+ Nuevo Suplidor" para empezar.</p></div>';
+    return;
+  }
+  // Enriquecer con stats de compras
+  container.innerHTML=suplidoresEntidades.map(function(s){
+    var facturas=compras.filter(function(c){return getTipoCompra(c)==='suplidor'&&c.suplidor===s.nombre;});
+    var total=facturas.reduce(function(sum,c){return sum+(c.costo||0);},0);
+    var pendientes=facturas.filter(function(c){return estadoPagoEfectivo(c)!=='Pagada';}).length;
+    return '<div class="suplidor-card">'+
+      '<div class="suplidor-header">'+
+        '<div><div class="suplidor-name">'+s.nombre+'</div>'+
+        '<div class="suplidor-meta">'+facturas.length+' facturas · '+pendientes+' pendientes'+(s.contacto?' · '+s.contacto:'')+'</div></div>'+
+        '<div style="display:flex;gap:6px;align-items:center"><div class="suplidor-total">$'+total.toFixed(2)+'</div>'+
+        '<button class="action-btn" onclick="openSuplidorModal(\''+s.firebaseId+'\')">Editar</button></div>'+
+      '</div>'+
+      (s.notas?'<div style="font-size:12px;color:var(--text-muted);padding:8px 0 0 0;border-top:1px solid var(--border);margin-top:8px">'+s.notas+'</div>':'')+
+      '</div>';
+  }).join('');
+}
+
+window.openSuplidorModal=function(id){
+  editSupId=id;
+  if(id){
+    var s=suplidoresEntidades.find(function(x){return x.firebaseId===id;});
+    if(!s)return;
+    document.getElementById('modal-sup-title').textContent='Editar Suplidor';
+    document.getElementById('sup-nombre').value=s.nombre||'';
+    document.getElementById('sup-contacto').value=s.contacto||'';
+    document.getElementById('sup-notas').value=s.notas||'';
+    document.getElementById('sup-btn-delete').style.display='block';
+  }else{
+    document.getElementById('modal-sup-title').textContent='Nuevo Suplidor';
+    document.getElementById('sup-nombre').value='';
+    document.getElementById('sup-contacto').value='';
+    document.getElementById('sup-notas').value='';
+    document.getElementById('sup-btn-delete').style.display='none';
+  }
+  document.getElementById('modal-sup-overlay').classList.add('open');
+}
+window.closeSupModal=function(){document.getElementById('modal-sup-overlay').classList.remove('open');editSupId=null;}
+window.closeSupModalOutside=function(e){if(e.target===document.getElementById('modal-sup-overlay'))closeSupModal();}
+
+window.guardarSuplidor=async function(){
+  var nombre=document.getElementById('sup-nombre').value.trim();
+  if(!nombre){alert('Escribe el nombre del suplidor.');return;}
+  var payload={
+    nombre:nombre,
+    contacto:document.getElementById('sup-contacto').value.trim(),
+    notas:document.getElementById('sup-notas').value.trim()
+  };
+  showLoading('Guardando...');
+  try{
+    if(editSupId){
+      await updateDoc(doc(db,'suplidores',editSupId),payload);
+    }else{
+      payload.creadoEn=new Date().toISOString();
+      await addDoc(collection(db,'suplidores'),payload);
+    }
+    await loadData();
+    closeSupModal();
+    window.renderSuplidoresEntidades();
+    showToast('✓ Suplidor guardado');
+  }catch(e){showToast('Error al guardar.');console.error(e);}
+  finally{hideLoading();}
+}
+
+window.eliminarSuplidor=async function(){
+  if(!editSupId)return;
+  var s=suplidoresEntidades.find(function(x){return x.firebaseId===editSupId;});
+  if(!s)return;
+  var facturas=compras.filter(function(c){return getTipoCompra(c)==='suplidor'&&c.suplidor===s.nombre;});
+  if(facturas.length){
+    if(!confirm('Este suplidor tiene '+facturas.length+' factura(s) asociada(s). ¿Eliminar solo el suplidor? Las facturas no se borran.'))return;
+  }else{
+    if(!confirm('¿Eliminar a "'+s.nombre+'"?'))return;
+  }
+  showLoading('Eliminando...');
+  try{
+    await deleteDoc(doc(db,'suplidores',editSupId));
+    await loadData();
+    closeSupModal();
+    window.renderSuplidoresEntidades();
+    showToast('Suplidor eliminado');
+  }catch(e){showToast('Error al eliminar.');}
+  finally{hideLoading();}
+}
+
+// ── Dropdown de suplidores en formulario nueva ──
+function refreshSuplidorDropdown(){
+  var sel=document.getElementById('suplidor-dropdown');
+  if(!sel)return;
+  var cur=sel.value;
+  sel.innerHTML='<option value="">Seleccionar suplidor...</option>'+
+    suplidoresEntidades.map(function(s){return '<option value="'+s.nombre.replace(/"/g,'&quot;')+'">'+s.nombre+'</option>';}).join('')+
+    '<option value="__nuevo__">+ Nuevo suplidor…</option>';
+  if(cur)sel.value=cur;
+}
+window.onSuplidorDropdownChange=function(){
+  var sel=document.getElementById('suplidor-dropdown');
+  if(sel.value==='__nuevo__'){sel.value='';openSuplidorModal(null);}
+}
+
+// ── Selector tipo de compra (online vs suplidor) ──
+window.selectTipoCompra=function(tipo,btn){
+  document.getElementById('tipoCompra').value=tipo;
+  document.getElementById('tc-online-btn').className='tipo-btn'+(tipo==='online'?' sel-negocio':'');
+  document.getElementById('tc-suplidor-btn').className='tipo-btn'+(tipo==='suplidor'?' sel-negocio':'');
+  var isSup=tipo==='suplidor';
+  document.getElementById('grupo-donde').style.display=isSup?'none':'flex';
+  document.getElementById('grupo-suplidor-dropdown').style.display=isSup?'flex':'none';
+  document.getElementById('grupo-invoice').style.display=isSup?'flex':'none';
+  document.getElementById('grupo-fecha').style.display=isSup?'none':'flex';
+  document.getElementById('grupo-fecha-factura').style.display=isSup?'flex':'none';
+  document.getElementById('grupo-fecha-pago').style.display=isSup?'flex':'none';
+  document.getElementById('grupo-estado-pago').style.display=isSup?'flex':'none';
+  document.getElementById('grupo-tracking').style.display=isSup?'none':'flex';
+  document.getElementById('grupo-partnumber').style.display=isSup?'none':'flex';
+  if(isSup){
+    if(!document.getElementById('fechaFactura').value)document.getElementById('fechaFactura').value=hoyISO();
+    refreshSuplidorDropdown();
+  }
+}
+
+// ── RESUMEN ──
+function renderResumen(){
+  var now=new Date(),months=[];
+  for(var i=5;i>=0;i--){var d=new Date(now.getFullYear(),now.getMonth()-i,1);months.push({key:d.toISOString().substring(0,7),label:d.toLocaleDateString('es',{month:'long',year:'numeric'})});}
+  months.reverse();
+  var html='';
+  months.forEach(function(m){
+    var data=compras.filter(function(c){return c.fecha&&c.fecha.startsWith(m.key);});
+    if(!data.length)return;
+    var total=data.reduce(function(s,c){return s+(c.costo||0);},0);
+    var catTotals=CATS.map(function(cat){return {cat:cat,total:data.filter(function(c){return c.categoria===cat;}).reduce(function(s,c){return s+(c.costo||0);},0)};}).filter(function(x){return x.total>0;}).sort(function(a,b){return b.total-a.total;});
+    var maxCat=catTotals.length?catTotals[0].total:1;
+    html+='<div style="margin-bottom:22px">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">'+
+      '<div style="font-family:\'Playfair Display\',serif;font-size:16px;font-weight:600;color:var(--white);text-transform:capitalize">'+m.label+'</div>'+
+      '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:15px;color:var(--gold)">$'+total.toFixed(2)+'</div></div>'+
+      '<div class="resumen-card">'+
+      catTotals.map(function(x){return '<div class="cat-row"><span class="cat-name">'+x.cat+'</span><div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:'+Math.round(x.total/maxCat*100)+'%"></div></div><span class="cat-amt">$'+x.total.toFixed(2)+'</span></div>';}).join('')+
+      (!catTotals.length?'<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:10px">Sin categorías asignadas</div>':'')+
+      '<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:11px">'+
+      '<span style="color:var(--text-muted)">'+data.length+' órdenes</span>'+
+      '<span style="color:var(--text-muted)">'+data.filter(function(c){return c.estado==='Recibido';}).length+' recibidas</span></div>'+
+      '</div></div>';
+  });
+  document.getElementById('resumen-content').innerHTML=html||'<div class="empty-state"><div class="icon">📊</div><p>No hay datos todavía.</p></div>';
+}
+
+// ── MODAL ──
+window.toggleNotaField=function(){
+  var newEstado=document.getElementById('edit-estado').value;
+  document.getElementById('nota-field').style.display=(prevEstado&&newEstado!==prevEstado)?'flex':'none';
+}
+window.openModal=function(idx){
+  editIndex=idx;var c=compras[idx];prevEstado=c.estado;
+  var editGrupoCliente=document.getElementById('edit-grupo-cliente');
+  if(editGrupoCliente)editGrupoCliente.style.display=c.tipo==='cliente'?'block':'none';
+  document.getElementById('edit-cliente').value=c.cliente||'';
+  document.getElementById('edit-descripcion').value=c.descripcion||'';
+  document.getElementById('edit-partnumber').value=c.partnumber||'';
+  document.getElementById('edit-cantidad').value=c.cantidad||1;
+  document.getElementById('edit-razon').value=c.razon||'';
+  document.getElementById('edit-cat').value=c.categoria||'';
+  document.getElementById('edit-costo').value=c.costo||'';
+  document.getElementById('edit-suplidor').value=c.suplidor||'';
+  document.getElementById('edit-donde').value=c.donde||'';
+  document.getElementById('edit-estado').value=c.estado||'Pendiente';
+  document.getElementById('edit-tracking').value=c.tracking||'';
+  document.getElementById('edit-nota').value='';
+  document.getElementById('nota-field').style.display='none';
+  // Campos de factura solo si es tipoCompra=suplidor
+  var isSup=getTipoCompra(c)==='suplidor';
+  document.getElementById('edit-factura-fields').style.display=isSup?'block':'none';
+  if(isSup){
+    document.getElementById('edit-invoiceNumber').value=c.invoiceNumber||'';
+    document.getElementById('edit-fechaFactura').value=c.fechaFactura||'';
+    document.getElementById('edit-fechaPago').value=c.fechaPago||'';
+    document.getElementById('edit-estadoPago').value=c.estadoPago||'Pendiente';
+  }
+  editFotoFiles=[];
+  editFotosToDelete=[];
+  document.getElementById('edit-foto-preview').innerHTML='';
+  renderExistingFotos(c.fotos||[]);
+  document.getElementById('modal-overlay').classList.add('open');
+}
+window.closeModalOutside=function(e){if(e.target===document.getElementById('modal-overlay'))closeModalBtn();}
+window.closeModalBtn=function(){document.getElementById('modal-overlay').classList.remove('open');editIndex=null;editFotoFiles=[];}
+
+// ── FOTOS ──
+let fotoFiles=[];
+let editFotoFiles=[];
+let editFotosToDelete=[];
+
+function isImageFile(name){return /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(name);}
+function docIcon(name){
+  if(/\.pdf$/i.test(name))return '📄';
+  if(/\.docx?$/i.test(name))return '📝';
+  if(/\.xlsx?$/i.test(name))return '📊';
+  return '📎';
+}
+function renderFotoPreview(files,containerId,listRef,isEdit){
+  var container=document.getElementById(containerId);
+  container.innerHTML='';
+  files.forEach(function(f,i){
+    var div=document.createElement('div');
+    div.style.cssText='position:relative;width:70px;height:70px;border-radius:4px;overflow:hidden;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;background:var(--navy-700)';
+    var btn='<button onclick="remove'+(isEdit?'Edit':'')+'FotoFile('+i+')" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.7);border:none;color:#fff;width:18px;height:18px;border-radius:50%;font-size:11px;cursor:pointer;line-height:18px;text-align:center">✕</button>';
+    if(isImageFile(f.name)){
+      var reader=new FileReader();
+      reader.onload=function(e){
+        div.innerHTML='<img src="'+e.target.result+'" style="width:100%;height:100%;object-fit:cover">'+btn;
+      };
+      reader.readAsDataURL(f);
+    }else{
+      div.innerHTML='<div style="text-align:center;padding:4px"><div style="font-size:26px">'+docIcon(f.name)+'</div><div style="font-size:9px;color:var(--text-muted);margin-top:2px;word-break:break-all;max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+f.name+'</div></div>'+btn;
+    }
+    container.appendChild(div);
+  });
+}
+
+window.handleFotoFiles=function(fileList){
+  for(var i=0;i<fileList.length;i++)fotoFiles.push(fileList[i]);
+  renderFotoPreview(fotoFiles,'foto-preview',fotoFiles,false);
+}
+window.removeFotoFile=function(i){fotoFiles.splice(i,1);renderFotoPreview(fotoFiles,'foto-preview',fotoFiles,false);}
+
+window.handleEditFotoFiles=function(fileList){
+  for(var i=0;i<fileList.length;i++)editFotoFiles.push(fileList[i]);
+  renderFotoPreview(editFotoFiles,'edit-foto-preview',editFotoFiles,true);
+}
+window.removeEditFotoFile=function(i){editFotoFiles.splice(i,1);renderFotoPreview(editFotoFiles,'edit-foto-preview',editFotoFiles,true);}
+
+window.deleteExistingFoto=function(url,el){
+  if(!confirm('¿Eliminar esta foto?'))return;
+  editFotosToDelete.push(url);
+  el.parentElement.remove();
+}
+
+function renderExistingFotos(fotos){
+  var container=document.getElementById('edit-fotos-existentes');
+  container.innerHTML='';
+  if(!fotos||!fotos.length){container.innerHTML='<div style="font-size:11px;color:var(--text-muted)">Sin archivos adjuntos</div>';return;}
+  fotos.forEach(function(url){
+    var div=document.createElement('div');
+    div.style.cssText='position:relative;width:70px;height:70px;border-radius:4px;overflow:hidden;border:1px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--navy-700)';
+    var safUrl=url.replace(/'/g,"\\'");
+    var btn='<button onclick="deleteExistingFoto(\''+safUrl+'\',this)" style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.7);border:none;color:#fff;width:18px;height:18px;border-radius:50%;font-size:11px;cursor:pointer;line-height:18px;text-align:center">✕</button>';
+    if(isImageFile(url)){
+      div.innerHTML='<img src="'+url+'" style="width:100%;height:100%;object-fit:cover" onclick="window.open(\''+safUrl+'\',\'_blank\')">'+btn;
+    }else{
+      var ext=url.split('?')[0].split('.').pop();
+      var icon=/pdf/i.test(ext)?'📄':/docx?/i.test(ext)?'📝':/xlsx?/i.test(ext)?'📊':'📎';
+      div.innerHTML='<div style="text-align:center;padding:4px" onclick="window.open(\''+safUrl+'\',\'_blank\')"><div style="font-size:26px">'+icon+'</div><div style="font-size:9px;color:var(--text-muted);margin-top:2px">'+ext.toUpperCase()+'</div></div>'+btn;
+    }
+    container.appendChild(div);
+  });
+}
+
+async function uploadFotos(files,ordenNum){
+  var urls=[];
+  for(var i=0;i<files.length;i++){
+    var file=files[i];
+    var ext=file.name.split('.').pop().toLowerCase();
+    var typeMap={'pdf':'application/pdf','doc':'application/msword','docx':'application/vnd.openxmlformats-officedocument.wordprocessingml.document','xls':'application/vnd.ms-excel','xlsx':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'};
+    var contentType=file.type||typeMap[ext]||'application/octet-stream';
+    var path='recibos/ORD-'+String(ordenNum).padStart(4,'0')+'/'+Date.now()+'_'+i+'.'+ext;
+    var storageRef=ref(storage,path);
+    await uploadBytes(storageRef,file,{contentType:contentType});
+    var url=await getDownloadURL(storageRef);
+    urls.push(url);
+  }
+  return urls;
+}
+
+// ── BOOT ──
+async function boot(){
+  var session=localStorage.getItem(SESSION_KEY);
+  if(session==='ok'){
+    var savedProfile=localStorage.getItem(PROFILE_KEY);
+    if(savedProfile){
+      // Already know who they are — go straight to app
+      document.getElementById('header-username').textContent=savedProfile;
+      document.getElementById('app').style.display='block';
+      document.getElementById('fecha').value=new Date().toISOString().split('T')[0];
+      var lastView=localStorage.getItem(VIEW_KEY)||'dashboard';
+      showLoading('Cargando...');
+      await loadData();
+      showView(lastView);
+      return;
+    }
+    // Logged in but no profile selected
+    showLoading('Iniciando...');
+    await showProfileScreen();
+    hideLoading();
+    return;
+  }
+  document.getElementById('screen-login').classList.remove('hidden');
+}
+
+window.exportarExcel=function(){
+  var data=filteredCompras();
+  if(!data.length){showToast('No hay órdenes para exportar.');return;}
+  var rows=data.slice().sort(function(a,b){return (b.fecha||'').localeCompare(a.fecha||'');}).map(function(c){
+    return {
+      'Orden':'ORD-'+String(c.num||'').padStart(4,'0'),
+      'Fecha':c.fecha||'',
+      'Empleado':c.empleado||'',
+      'Descripción':c.descripcion||'',
+      'Cantidad':c.cantidad||1,
+      'Part Number':c.partnumber||'',
+      'Tipo':c.tipo==='negocio'?'Negocio':'Cliente',
+      'Cliente':c.cliente||'',
+      'Categoría':c.categoria||'',
+      'Suplidor':c.suplidor||'',
+      'Dónde':c.donde||'',
+      'Costo':c.costo||0,
+      'Tracking':c.tracking||'',
+      'Estado':c.estado||''
+    };
+  });
+  var ws=XLSX.utils.json_to_sheet(rows);
+  var colWidths=[{wch:10},{wch:12},{wch:16},{wch:35},{wch:18},{wch:10},{wch:18},{wch:16},{wch:20},{wch:18},{wch:10},{wch:22},{wch:12}];
+  ws['!cols']=colWidths;
+  var wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'Órdenes');
+  var fecha=new Date().toISOString().split('T')[0];
+  XLSX.writeFile(wb,'AgroHorse_Ordenes_'+fecha+'.xlsx');
+  showToast('✓ Excel descargado');
+}
+
+boot();
+</script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+</body>
+</html>
