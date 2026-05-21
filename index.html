@@ -464,19 +464,18 @@ tr.row-urgente td:first-child{border-left:3px solid var(--warning);}
 
       <!-- FACTURAS SUPLIDORES TAB -->
       <div id="htab-content-facturas" style="display:none">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
-          <p style="color:var(--text-muted);font-size:13px;font-weight:300">Cuentas por pagar — facturas de suplidores con fecha de vencimiento.</p>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-            <select id="fact-filtro-sup" onchange="renderFacturas()" style="background:var(--navy-800);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:7px 10px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;outline:none;"><option value="">Todos los suplidores</option></select>
-            <select id="fact-filtro-estado" onchange="renderFacturas()" style="background:var(--navy-800);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:7px 10px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;outline:none;">
+        <div class="historial-top">
+          <div><p style="color:var(--text-muted);font-size:13px;font-weight:300">Cuentas por pagar — facturas de suplidores con fecha de vencimiento.</p></div>
+          <div class="filters">
+            <select id="fact-filtro-mes" onchange="renderFacturas()"><option value="">Todos los meses</option></select>
+            <select id="fact-filtro-sup" onchange="renderFacturas()"><option value="">Todos los suplidores</option></select>
+            <select id="fact-filtro-estado" onchange="renderFacturas()">
               <option value="">Todos los estados</option>
               <option value="Pendiente">Pendiente</option>
               <option value="Pagada">Pagada</option>
               <option value="Vencida">Vencida</option>
             </select>
-            <input type="date" id="fact-filtro-desde" onchange="renderFacturas()" placeholder="Desde" style="background:var(--navy-800);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:7px 10px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;outline:none;">
-            <input type="date" id="fact-filtro-hasta" onchange="renderFacturas()" placeholder="Hasta" style="background:var(--navy-800);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:7px 10px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;outline:none;">
-            <input type="text" id="fact-filtro-buscar" oninput="renderFacturas()" placeholder="🔍 Buscar..." style="background:var(--navy-800);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);padding:7px 10px;font-family:'IBM Plex Sans',sans-serif;font-size:12px;outline:none;width:140px;">
+            <input type="text" id="fact-filtro-buscar" oninput="renderFacturas()" placeholder="🔍 Buscar...">
           </div>
         </div>
         <div class="stats-row" id="fact-stats-row"></div>
@@ -1214,25 +1213,29 @@ window.renderHistorial = function renderHistorial(){
 function buildFacturasFilters(){
   var sel=document.getElementById('fact-filtro-sup');
   if(!sel)return;
-  var currentVal=sel.value;
+  var currentSup=sel.value;
   var nombres=compras.filter(function(c){return getTipoCompra(c)==='suplidor'&&c.suplidor;}).map(function(c){return c.suplidor;});
   suplidoresEntidades.forEach(function(s){if(nombres.indexOf(s.nombre)===-1)nombres.push(s.nombre);});
   nombres=nombres.filter(function(x,i,a){return a.indexOf(x)===i;}).sort();
   sel.innerHTML='<option value="">Todos los suplidores</option>'+nombres.map(function(n){return '<option value="'+n.replace(/"/g,'&quot;')+'">'+n+'</option>';}).join('');
-  if(currentVal)sel.value=currentVal;
+  if(currentSup)sel.value=currentSup;
+  var mesSel=document.getElementById('fact-filtro-mes');
+  if(!mesSel)return;
+  var currentMes=mesSel.value;
+  var meses=compras.filter(function(c){return getTipoCompra(c)==='suplidor'&&c.fecha;}).map(function(c){return c.fecha.substring(0,7);}).filter(function(x,i,a){return x&&a.indexOf(x)===i;}).sort().reverse();
+  mesSel.innerHTML='<option value="">Todos los meses</option>'+meses.map(function(m){var p=m.split('-');var label=new Date(p[0],p[1]-1).toLocaleDateString('es',{month:'long',year:'numeric'});return '<option value="'+m+'">'+label.charAt(0).toUpperCase()+label.slice(1)+'</option>';}).join('');
+  if(currentMes)mesSel.value=currentMes;
 }
 
 window.renderFacturas = function renderFacturas(){
+  var filMes=(document.getElementById('fact-filtro-mes')||{value:''}).value;
   var filSup=document.getElementById('fact-filtro-sup').value;
   var filEstado=document.getElementById('fact-filtro-estado').value;
-  var filDesde=(document.getElementById('fact-filtro-desde')||{value:''}).value;
-  var filHasta=(document.getElementById('fact-filtro-hasta')||{value:''}).value;
   var filBuscar=((document.getElementById('fact-filtro-buscar')||{value:''}).value||'').toLowerCase().trim();
   var data=compras.filter(function(c){return getTipoCompra(c)==='suplidor';});
+  if(filMes)data=data.filter(function(c){return c.fecha&&c.fecha.startsWith(filMes);});
   if(filSup)data=data.filter(function(c){return c.suplidor===filSup;});
   if(filEstado)data=data.filter(function(c){return estadoPagoEfectivo(c)===filEstado;});
-  if(filDesde)data=data.filter(function(c){return c.fecha&&c.fecha>=filDesde;});
-  if(filHasta)data=data.filter(function(c){return c.fecha&&c.fecha<=filHasta;});
   if(filBuscar)data=data.filter(function(c){return (c.suplidor||'').toLowerCase().includes(filBuscar)||(c.descripcion||'').toLowerCase().includes(filBuscar)||(c.invoiceNumber||'').toLowerCase().includes(filBuscar);});
   // stats
   var totalPendiente=data.filter(function(c){return estadoPagoEfectivo(c)!=='Pagada';}).reduce(function(s,c){return s+(c.costo||0);},0);
