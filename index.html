@@ -1443,7 +1443,15 @@ window.guardarSuplidor=async function(){
   showLoading('Guardando...');
   try{
     if(editSupId){
+      var supActual=suplidoresEntidades.find(function(s){return s.firebaseId===editSupId;});
+      var nombreViejo=supActual?supActual.nombre:'';
       await updateDoc(doc(db,'suplidores',editSupId),payload);
+      if(nombreViejo&&nombreViejo!==nombre){
+        var ordenesAfectadas=compras.filter(function(c){return c.suplidor===nombreViejo;});
+        for(var i=0;i<ordenesAfectadas.length;i++){
+          await updateDoc(doc(db,'compras',ordenesAfectadas[i].firebaseId),{suplidor:nombre});
+        }
+      }
     }else{
       payload.creadoEn=new Date().toISOString();
       await addDoc(collection(db,'suplidores'),payload);
