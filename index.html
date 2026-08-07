@@ -185,6 +185,15 @@ tr.row-urgente td:first-child{border-left:3px solid var(--warning);}
 .cat-bar-wrap{flex:1;margin:0 12px;background:var(--border);border-radius:2px;height:4px;overflow:hidden;}
 .cat-bar-fill{height:100%;background:var(--gold);border-radius:2px;transition:width 0.4s;}
 
+.ivu-box{background:var(--navy-900);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px;display:flex;flex-wrap:wrap;gap:12px 26px;align-items:center;}
+.ivu-cell .s-label{margin-bottom:3px;}
+.rep-section{margin-bottom:28px;}
+.rep-title{font-family:'Playfair Display',serif;font-size:17px;font-weight:600;color:var(--white);margin-bottom:4px;}
+.rep-sub{font-size:12px;color:var(--text-muted);font-weight:300;margin-bottom:12px;}
+.rep-note{background:rgba(212,160,64,0.08);border:1px solid rgba(212,160,64,0.3);border-radius:var(--radius);padding:10px 14px;font-size:12px;color:var(--warning);margin-bottom:12px;line-height:1.5;}
+tfoot td{border-top:1px solid var(--border-light);font-weight:600;background:var(--navy-900);}
+tfoot tr:hover td{background:var(--navy-900);}
+
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--navy-600);border:1px solid var(--gold);color:var(--gold);padding:11px 22px;border-radius:4px;font-size:13px;font-weight:500;z-index:999;transition:transform 0.3s cubic-bezier(0.34,1.56,0.64,1);white-space:nowrap;box-shadow:0 8px 32px rgba(0,0,0,0.5);}
 .toast.show{transform:translateX(-50%) translateY(0);}
 
@@ -209,6 +218,10 @@ tr.row-urgente td:first-child{border-left:3px solid var(--warning);}
   .form-grid{grid-template-columns:1fr;}.form-group.full{grid-column:1;}
   .stats-row,.dash-grid{grid-template-columns:1fr 1fr;}
   th:nth-child(4),td:nth-child(4),th:nth-child(6),td:nth-child(6),th:nth-child(7),td:nth-child(7){display:none;}
+  /* Las tablas de Reportes no ocultan columnas: se desplazan de lado */
+  .rep-table th:nth-child(n),.rep-table td:nth-child(n){display:table-cell;}
+  .rep-wrap{overflow-x:auto;}
+  .rep-table{min-width:620px;}
   .user-chip{display:none;}
   nav button{padding:5px 8px;font-size:10px;}
 }
@@ -307,6 +320,7 @@ tr.row-urgente td:first-child{border-left:3px solid var(--warning);}
         <button onclick="showView('nueva',this)">+ Nueva</button>
         <button onclick="showView('historial',this)" id="nav-historial">Historial</button>
         <button onclick="showView('resumen',this)">Resumen</button>
+        <button onclick="showView('reportes',this)">Reportes</button>
       </nav>
       <button class="logout-btn" onclick="doLogout()">Salir</button>
     </div>
@@ -403,7 +417,20 @@ tr.row-urgente td:first-child{border-left:3px solid var(--warning);}
               </select>
             </div>
             <div class="form-group" id="grupo-invoice" style="display:none"><label>Invoice Number</label><input type="text" id="invoiceNumber" placeholder="Ej: INV-00523"></div>
-            <div class="form-group"><label>Costo Total ($)</label><input type="number" id="costo" placeholder="0.00" step="0.01" min="0"></div>
+            <div class="form-group"><label id="label-monto">Subtotal — sin IVU ($)</label><input type="number" id="monto" placeholder="0.00" step="0.01" min="0" oninput="recalcIvu()"></div>
+            <div class="form-group"><label>IVU</label>
+              <select id="ivuTasa" onchange="onIvuTasaChange()">
+                <option value="11.5">11.5% — Estatal + Municipal</option>
+                <option value="10.5">10.5% — Solo estatal</option>
+                <option value="0">Exento — 0%</option>
+                <option value="otro">Otro %…</option>
+              </select>
+            </div>
+            <div class="form-group" id="grupo-ivu-otro" style="display:none"><label>Porcentaje de IVU (%)</label><input type="number" id="ivuTasaOtro" step="0.01" min="0" max="100" placeholder="Ej: 7" oninput="recalcIvu()"></div>
+            <div class="form-group full" style="gap:8px">
+              <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:12px;color:var(--text-muted);cursor:pointer;font-weight:400"><input type="checkbox" id="montoIncluyeIvu" onchange="recalcIvu()" style="width:auto;margin:0;padding:0"> El monto que escribí ya incluye el IVU (el sistema lo separa)</label>
+              <div id="ivu-breakdown" class="ivu-box"></div>
+            </div>
             <div class="form-group" id="grupo-fecha"><label>Fecha</label><input type="date" id="fecha"></div>
             <div class="form-group" id="grupo-fecha-factura" style="display:none"><label>Fecha de Factura</label><input type="date" id="fechaFactura"></div>
             <div class="form-group" id="grupo-fecha-pago" style="display:none"><label>Fecha Límite de Pago</label><input type="date" id="fechaPago"></div>
@@ -531,6 +558,43 @@ tr.row-urgente td:first-child{border-left:3px solid var(--warning);}
       <div class="page-header"><div><h1>Resumen Mensual</h1><p>Desglose de gastos por mes y categoría.</p></div></div>
       <div id="resumen-content"></div>
     </div>
+
+    <!-- REPORTES -->
+    <div id="view-reportes" class="view">
+      <div class="page-header">
+        <div><h1>Reportes</h1><p>Cierre del mes, IVU e informes para el contable.</p></div>
+        <button onclick="exportarReportesExcel()" style="background:var(--gold);border:none;color:var(--navy-900);padding:9px 16px;border-radius:var(--radius);font-family:'IBM Plex Sans',sans-serif;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;">📥 Exportar Excel</button>
+      </div>
+      <div class="filters" style="margin-bottom:20px;align-items:center">
+        <label style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px">Período</label>
+        <select id="rep-mes" onchange="renderReportes()" style="width:auto;min-width:180px"></select>
+        <span id="rep-periodo-label" style="font-size:11px;color:var(--text-muted)"></span>
+      </div>
+
+      <div class="rep-section">
+        <div class="rep-title">1 · Cierre del Período</div>
+        <div class="rep-sub">Lo que el contable necesita para cuadrar el mes: total gastado, cuánto fue mercancía y cuánto fue IVU.</div>
+        <div id="rep-cierre"></div>
+      </div>
+
+      <div class="rep-section">
+        <div class="rep-title">2 · IVU por Suplidor / Origen</div>
+        <div class="rep-sub">Cuánto se pagó de IVU estatal (10.5%) y municipal (1%) a cada suplidor u origen de compra.</div>
+        <div id="rep-ivu"></div>
+      </div>
+
+      <div class="rep-section">
+        <div class="rep-title">3 · Compras por Cliente</div>
+        <div class="rep-sub">Órdenes hechas para clientes — lo que se les debe cobrar o ya se les facturó.</div>
+        <div id="rep-clientes"></div>
+      </div>
+
+      <div class="rep-section">
+        <div class="rep-title">4 · Cuentas por Pagar</div>
+        <div class="rep-sub">Facturas de suplidores que siguen sin pagar. No depende del filtro de período — siempre muestra lo que se debe hoy.</div>
+        <div id="rep-pagar"></div>
+      </div>
+    </div>
   </main>
 </div>
 
@@ -585,8 +649,14 @@ tr.row-urgente td:first-child{border-left:3px solid var(--warning);}
             <option>Otro</option>
           </select>
         </div>
-        <div class="form-group"><label>Costo ($)</label><input type="number" id="edit-costo" step="0.01"></div>
+        <div class="form-group"><label id="edit-label-monto">Costo total ($)</label><input type="number" id="edit-monto" step="0.01" min="0" oninput="recalcIvuEdit()"></div>
       </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label>IVU</label><select id="edit-ivuTasa" onchange="onIvuTasaChangeEdit()"></select></div>
+        <div class="form-group" id="edit-grupo-ivu-otro" style="display:none"><label>Porcentaje (%)</label><input type="number" id="edit-ivuTasaOtro" step="0.01" min="0" max="100" oninput="recalcIvuEdit()"></div>
+      </div>
+      <label id="edit-incluye-wrap" style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:12px;color:var(--text-muted);cursor:pointer;font-weight:400"><input type="checkbox" id="edit-montoIncluyeIvu" onchange="recalcIvuEdit()" style="width:auto;margin:0;padding:0"> El monto que escribí ya incluye el IVU</label>
+      <div id="edit-ivu-breakdown" class="ivu-box"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div class="form-group"><label>Suplidor</label><input type="text" id="edit-suplidor"></div>
         <div class="form-group"><label>¿Dónde se compró?</label>
@@ -688,6 +758,94 @@ function estadoPagoEfectivo(c){
   if(c.estadoPago==='Pagada')return 'Pagada';
   if(c.fechaPago && c.fechaPago<hoyISO())return 'Vencida';
   return 'Pendiente';
+}
+
+// ── IVU (Puerto Rico) ──
+// IMPORTANTE: el campo `costo` de cada orden SIEMPRE guarda el TOTAL (con IVU),
+// igual que antes. Los campos subtotal/ivu/ivuEstatal/ivuMunicipal son adicionales.
+// Las órdenes viejas no tienen esos campos y se tratan como "sin desglose".
+const IVU_EST_MAX = 10.5;   // tasa estatal
+function r2(n){n=Number(n);if(!isFinite(n))return 0;return Math.round((n+Number.EPSILON)*100)/100;}
+function money(n){return '$'+r2(n).toFixed(2);}
+// Reparte la tasa total entre estatal (hasta 10.5%) y municipal (el resto)
+function tasaSplit(t){t=Number(t);if(!isFinite(t)||t<0)t=0;var est=Math.min(t,IVU_EST_MAX);return {est:est,mun:r2(t-est)};}
+// Calcula el desglose. Si incluye=true, el monto dado ya trae el IVU adentro.
+function calcIvu(monto,tasa,incluye){
+  monto=Number(monto);if(!isFinite(monto)||monto<0)monto=0;
+  tasa=Number(tasa);if(!isFinite(tasa)||tasa<0)tasa=0;
+  var sp=tasaSplit(tasa),sub,est,mun,ivu,total;
+  if(incluye){
+    total=r2(monto);
+    sub=r2(total/(1+tasa/100));
+    ivu=r2(total-sub);
+    if(tasa>0){est=r2(ivu*(sp.est/tasa));mun=r2(ivu-est);}
+    else{est=0;mun=0;}
+  }else{
+    sub=r2(monto);
+    est=r2(sub*sp.est/100);
+    mun=r2(sub*sp.mun/100);
+    ivu=r2(est+mun);
+    total=r2(sub+ivu);
+  }
+  return {subtotal:sub,estatal:est,municipal:mun,ivu:ivu,total:total,tasa:tasa};
+}
+// Lee cualquier orden (nueva o vieja) y devuelve su desglose para los reportes
+function ivuInfo(c){
+  var total=Number(c.costo)||0;
+  if(typeof c.subtotal==='number'&&isFinite(c.subtotal)){
+    return {desglosado:true,subtotal:r2(c.subtotal),estatal:r2(c.ivuEstatal),municipal:r2(c.ivuMunicipal),ivu:r2(c.ivu),total:r2(total)};
+  }
+  return {desglosado:false,subtotal:r2(total),estatal:0,municipal:0,ivu:0,total:r2(total)};
+}
+// De dónde vino la compra: suplidor si es factura, si no la tienda
+function origenDe(c){
+  if(getTipoCompra(c)==='suplidor')return (c.suplidor||'').trim()||'Suplidor sin nombre';
+  return (c.donde||'').trim()||(c.suplidor||'').trim()||'Sin origen';
+}
+function leerTasa(selId,otroId){
+  var el=document.getElementById(selId);
+  if(!el)return 0;
+  if(el.value==='otro'){var o=parseFloat((document.getElementById(otroId)||{value:''}).value);return (isFinite(o)&&o>=0)?o:0;}
+  return parseFloat(el.value)||0;
+}
+function ivuBreakdownHTML(res){
+  var sp=tasaSplit(res.tasa);
+  return '<div class="ivu-cell"><div class="s-label">Subtotal</div><div class="price">'+money(res.subtotal)+'</div></div>'+
+    '<div class="ivu-cell"><div class="s-label">IVU Estatal '+sp.est+'%</div><div class="price" style="color:#90c0f0">'+money(res.estatal)+'</div></div>'+
+    (sp.mun>0?'<div class="ivu-cell"><div class="s-label">IVU Municipal '+sp.mun+'%</div><div class="price" style="color:#90c0f0">'+money(res.municipal)+'</div></div>':'')+
+    '<div class="ivu-cell" style="margin-left:auto;text-align:right"><div class="s-label">Total a pagar</div><div style="font-family:\'IBM Plex Mono\',monospace;font-size:18px;color:var(--gold)">'+money(res.total)+'</div></div>';
+}
+// Formulario Nueva Orden
+window.recalcIvu=function(){
+  var tasa=leerTasa('ivuTasa','ivuTasaOtro');
+  var incluye=document.getElementById('montoIncluyeIvu').checked;
+  var res=calcIvu(document.getElementById('monto').value,tasa,incluye);
+  document.getElementById('label-monto').textContent=incluye?'Total — IVU incluido ($)':(tasa>0?'Subtotal — sin IVU ($)':'Costo ($) — exento');
+  document.getElementById('ivu-breakdown').innerHTML=ivuBreakdownHTML(res);
+}
+window.onIvuTasaChange=function(){
+  document.getElementById('grupo-ivu-otro').style.display=document.getElementById('ivuTasa').value==='otro'?'flex':'none';
+  window.recalcIvu();
+}
+// Modal Editar
+window.recalcIvuEdit=function(){
+  var sel=document.getElementById('edit-ivuTasa');
+  var esLegacy=sel.value==='legacy';
+  document.getElementById('edit-incluye-wrap').style.display=esLegacy?'none':'flex';
+  document.getElementById('edit-ivu-breakdown').style.display=esLegacy?'none':'flex';
+  if(esLegacy){
+    document.getElementById('edit-label-monto').textContent='Costo total ($) — sin desglose';
+    return;
+  }
+  var tasa=leerTasa('edit-ivuTasa','edit-ivuTasaOtro');
+  var incluye=document.getElementById('edit-montoIncluyeIvu').checked;
+  var res=calcIvu(document.getElementById('edit-monto').value,tasa,incluye);
+  document.getElementById('edit-label-monto').textContent=incluye?'Total — IVU incluido ($)':(tasa>0?'Subtotal — sin IVU ($)':'Costo ($) — exento');
+  document.getElementById('edit-ivu-breakdown').innerHTML=ivuBreakdownHTML(res);
+}
+window.onIvuTasaChangeEdit=function(){
+  document.getElementById('edit-grupo-ivu-otro').style.display=document.getElementById('edit-ivuTasa').value==='otro'?'flex':'none';
+  window.recalcIvuEdit();
 }
 
 // ── UTILS ──
@@ -835,7 +993,7 @@ function showApp(name){
   document.getElementById('app').style.display='block';
   document.getElementById('fecha').value=new Date().toISOString().split('T')[0];
   const lastView=localStorage.getItem(VIEW_KEY)||'dashboard';
-  loadData().then(function(){showView(lastView);});
+  loadData().then(function(){showView(lastView);window.recalcIvu();});
 }
 
 // ── FIREBASE COMPRAS ──
@@ -893,6 +1051,8 @@ async function loadData(showMsg){
     buildFilters();
     renderHistorial();
     buildFacturasFilters();
+    var vRep=document.getElementById('view-reportes');
+    if(vRep&&vRep.classList.contains('active')){buildReportesFilters();window.renderReportes();}
     if(showMsg)showToast('✓ Datos actualizados');
   }catch(e){showToast('Error al cargar datos.');console.error(e);}
   finally{hideLoading();}
@@ -911,6 +1071,11 @@ window.guardarCompra=async function(){
       ? document.getElementById('suplidor-dropdown').value
       : '';
     if(tipoCompra==='suplidor' && !suplidorNombre){alert('Selecciona un suplidor.');btn.disabled=false;btn.textContent='Registrar Orden de Compra';hideLoading();return;}
+    const ivuRes=calcIvu(
+      document.getElementById('monto').value,
+      leerTasa('ivuTasa','ivuTasaOtro'),
+      document.getElementById('montoIncluyeIvu').checked
+    );
     const orden={
       num:compras.length+1,
       tipoCompra:tipoCompra,
@@ -925,7 +1090,12 @@ window.guardarCompra=async function(){
       fecha:tipoCompra==='suplidor' ? (document.getElementById('fechaFactura').value||hoyISO()) : document.getElementById('fecha').value,
       suplidor:suplidorNombre,
       donde:tipoCompra==='suplidor' ? 'Directamente al suplidor' : document.getElementById('donde').value,
-      costo:parseFloat(document.getElementById('costo').value)||0,
+      subtotal:ivuRes.subtotal,
+      ivuTasa:ivuRes.tasa,
+      ivuEstatal:ivuRes.estatal,
+      ivuMunicipal:ivuRes.municipal,
+      ivu:ivuRes.ivu,
+      costo:ivuRes.total,
       tracking:document.getElementById('tracking').value.trim(),
       estado:document.getElementById('estado').value,
       invoiceNumber:tipoCompra==='suplidor' ? document.getElementById('invoiceNumber').value.trim() : '',
@@ -968,13 +1138,25 @@ window.guardarEdicion=async function(){
       cantidad:parseInt(document.getElementById('edit-cantidad').value)||1,
       razon:document.getElementById('edit-razon').value,
       categoria:document.getElementById('edit-cat').value,
-      costo:parseFloat(document.getElementById('edit-costo').value)||0,
       suplidor:document.getElementById('edit-suplidor').value,
       donde:document.getElementById('edit-donde').value,
       estado:newEstado,
       tracking:document.getElementById('edit-tracking').value,
       notas:notasNuevas
     };
+    // Costo e IVU. Si sigue en "legacy" (orden vieja sin desglose) solo se toca el total.
+    var eMonto=parseFloat(document.getElementById('edit-monto').value)||0;
+    if(document.getElementById('edit-ivuTasa').value==='legacy'){
+      updatePayload.costo=r2(eMonto);
+    }else{
+      var eRes=calcIvu(eMonto,leerTasa('edit-ivuTasa','edit-ivuTasaOtro'),document.getElementById('edit-montoIncluyeIvu').checked);
+      updatePayload.costo=eRes.total;
+      updatePayload.subtotal=eRes.subtotal;
+      updatePayload.ivuTasa=eRes.tasa;
+      updatePayload.ivuEstatal=eRes.estatal;
+      updatePayload.ivuMunicipal=eRes.municipal;
+      updatePayload.ivu=eRes.ivu;
+    }
     if(getTipoCompra(c)==='suplidor'){
       updatePayload.invoiceNumber=document.getElementById('edit-invoiceNumber').value.trim();
       updatePayload.fechaFactura=document.getElementById('edit-fechaFactura').value;
@@ -1029,6 +1211,7 @@ window.showView=function(v,btn){
   if(v==='historial'){buildFilters();buildFacturasFilters();renderHistorial();}
   if(v==='dashboard')renderDashboard();
   if(v==='resumen')renderResumen();
+  if(v==='reportes'){buildReportesFilters();renderReportes();}
 }
 
 window.switchHistorialTab=function(tab){
@@ -1060,7 +1243,9 @@ window.selectTipo=function(tipo,btn){
 function resetForm(){
   ['descripcion','partnumber','razon','cliente','suplidor','tracking','invoiceNumber','fechaFactura','fechaPago'].forEach(function(id){var el=document.getElementById(id);if(el)el.value='';});var cantEl=document.getElementById('cantidad');if(cantEl)cantEl.value='1';;
   fotoFiles=[];document.getElementById('foto-preview').innerHTML='';
-  document.getElementById('costo').value='';document.getElementById('donde').value='';
+  document.getElementById('monto').value='';document.getElementById('donde').value='';
+  document.getElementById('ivuTasaOtro').value='';
+  document.getElementById('montoIncluyeIvu').checked=false;
   document.getElementById('categoria').value='';document.getElementById('estado').value='Pendiente';
   var epEl=document.getElementById('estadoPago');if(epEl)epEl.value='Pendiente';
   var sdd=document.getElementById('suplidor-dropdown');if(sdd)sdd.value='';
@@ -1515,6 +1700,13 @@ window.selectTipoCompra=function(tipo,btn){
   document.getElementById('grupo-estado-pago').style.display=isSup?'flex':'none';
   document.getElementById('grupo-tracking').style.display=isSup?'none':'flex';
   document.getElementById('grupo-partnumber').style.display=isSup?'none':'flex';
+  // IVU por defecto: facturas de suplidor van exentas, órdenes online pagan 11.5%
+  var tasaSel=document.getElementById('ivuTasa');
+  if(tasaSel){
+    tasaSel.value=isSup?'0':'11.5';
+    document.getElementById('grupo-ivu-otro').style.display='none';
+    window.recalcIvu();
+  }
   if(isSup){
     if(!document.getElementById('fechaFactura').value)document.getElementById('fechaFactura').value=hoyISO();
     refreshSuplidorDropdown();
@@ -1548,6 +1740,188 @@ function renderResumen(){
   document.getElementById('resumen-content').innerHTML=html||'<div class="empty-state"><div class="icon">📊</div><p>No hay datos todavía.</p></div>';
 }
 
+// ── REPORTES ──
+var repMesInit=false;
+function mesLabel(m){
+  var p=m.split('-');
+  var l=new Date(Number(p[0]),Number(p[1])-1,1).toLocaleDateString('es',{month:'long',year:'numeric'});
+  return l.charAt(0).toUpperCase()+l.slice(1);
+}
+function buildReportesFilters(){
+  var sel=document.getElementById('rep-mes');
+  if(!sel)return;
+  var actual=sel.value;
+  var meses=compras.map(function(c){return c.fecha?c.fecha.substring(0,7):'';})
+    .filter(function(x,i,a){return x&&a.indexOf(x)===i;}).sort().reverse();
+  sel.innerHTML=meses.map(function(m){return '<option value="'+m+'">'+mesLabel(m)+'</option>';}).join('')+
+    '<option value="">Todos los meses</option>';
+  if(actual!==null&&actual!==undefined&&(actual===''||meses.indexOf(actual)!==-1)&&repMesInit){
+    sel.value=actual;
+  }else{
+    // Primera vez: arranca en el mes actual si tiene datos, si no en el más reciente
+    var mesHoy=hoyISO().substring(0,7);
+    sel.value=meses.indexOf(mesHoy)!==-1?mesHoy:(meses.length?meses[0]:'');
+    repMesInit=true;
+  }
+}
+function repData(){
+  var sel=document.getElementById('rep-mes');
+  var mes=sel?sel.value:'';
+  var data=compras.filter(function(c){return !mes||(c.fecha||'').startsWith(mes);});
+  return {mes:mes,label:mes?mesLabel(mes):'Todos los meses',data:data};
+}
+// Agrupa órdenes por una llave y suma el desglose de IVU
+function agruparIvu(data,keyFn){
+  var mapa={};
+  data.forEach(function(c){
+    var k=keyFn(c);
+    if(!mapa[k])mapa[k]={key:k,n:0,sinDesglose:0,subtotal:0,estatal:0,municipal:0,ivu:0,total:0,tipo:getTipoCompra(c)};
+    var g=mapa[k],info=ivuInfo(c);
+    g.n++;
+    if(!info.desglosado)g.sinDesglose++;
+    g.subtotal=r2(g.subtotal+info.subtotal);
+    g.estatal=r2(g.estatal+info.estatal);
+    g.municipal=r2(g.municipal+info.municipal);
+    g.ivu=r2(g.ivu+info.ivu);
+    g.total=r2(g.total+info.total);
+  });
+  return Object.keys(mapa).map(function(k){return mapa[k];})
+    .sort(function(a,b){return b.total-a.total;});
+}
+function totalesDe(data){
+  var t={n:data.length,sinDesglose:0,subtotal:0,estatal:0,municipal:0,ivu:0,total:0,montoSinDesglose:0};
+  data.forEach(function(c){
+    var i=ivuInfo(c);
+    if(!i.desglosado){t.sinDesglose++;t.montoSinDesglose=r2(t.montoSinDesglose+i.total);}
+    t.subtotal=r2(t.subtotal+i.subtotal);
+    t.estatal=r2(t.estatal+i.estatal);
+    t.municipal=r2(t.municipal+i.municipal);
+    t.ivu=r2(t.ivu+i.ivu);
+    t.total=r2(t.total+i.total);
+  });
+  return t;
+}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function vacio(icono,txt){return '<div class="empty-state"><div class="icon">'+icono+'</div><p>'+txt+'</p></div>';}
+
+window.renderReportes=function renderReportes(){
+  var p=repData(),data=p.data,t=totalesDe(data);
+  var lbl=document.getElementById('rep-periodo-label');
+  if(lbl)lbl.textContent=data.length+' órdenes en '+p.label.toLowerCase();
+
+  // ── 1. CIERRE ──
+  var online=data.filter(function(c){return getTipoCompra(c)==='online';});
+  var sup=data.filter(function(c){return getTipoCompra(c)==='suplidor';});
+  var tOnline=totalesDe(online),tSup=totalesDe(sup);
+  var html='<div class="stats-row">'+
+    '<div class="stat-card"><div class="s-label">Total Gastado</div><div class="s-value">'+money(t.total)+'</div></div>'+
+    '<div class="stat-card"><div class="s-label">Subtotal sin IVU</div><div class="s-value white">'+money(t.subtotal)+'</div></div>'+
+    '<div class="stat-card"><div class="s-label">IVU Estatal 10.5%</div><div class="s-value blue">'+money(t.estatal)+'</div></div>'+
+    '<div class="stat-card"><div class="s-label">IVU Municipal 1%</div><div class="s-value blue">'+money(t.municipal)+'</div></div>'+
+    '</div>';
+  if(t.sinDesglose>0){
+    html+='<div class="rep-note">⚠️ '+t.sinDesglose+' orden(es) por '+money(t.montoSinDesglose)+' se registraron con el total incluido y no tienen el IVU separado. '+
+      'Ese monto cuenta completo dentro de "Subtotal sin IVU". Para desglosarlas, ábrelas en Historial → Editar y escoge la tasa de IVU.</div>';
+  }
+  html+='<div class="resumen-card">'+
+    '<div class="cat-row"><span class="cat-name">🛒 Órdenes Online</span><span style="font-size:11px;color:var(--text-muted);margin-right:10px">'+tOnline.n+' ord · IVU '+money(tOnline.ivu)+'</span><span class="cat-amt">'+money(tOnline.total)+'</span></div>'+
+    '<div class="cat-row"><span class="cat-name">🧾 Facturas de Suplidores</span><span style="font-size:11px;color:var(--text-muted);margin-right:10px">'+tSup.n+' ord · IVU '+money(tSup.ivu)+'</span><span class="cat-amt">'+money(tSup.total)+'</span></div>'+
+    '</div>';
+  // Desglose por categoría
+  var cats=CATS.map(function(cat){
+    return {cat:cat,t:totalesDe(data.filter(function(c){return c.categoria===cat;}))};
+  });
+  var sinCat=totalesDe(data.filter(function(c){return !c.categoria;}));
+  if(sinCat.total>0||sinCat.n>0)cats.push({cat:'Sin categoría',t:sinCat});
+  cats=cats.filter(function(x){return x.t.n>0;}).sort(function(a,b){return b.t.total-a.t.total;});
+  var maxCat=cats.length?Math.max(cats[0].t.total,0.01):1;
+  html+='<div class="resumen-card"><div class="s-label" style="margin-bottom:10px">Por Categoría</div>'+
+    (cats.length?cats.map(function(x){
+      return '<div class="cat-row"><span class="cat-name">'+esc(x.cat)+'</span>'+
+        '<div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:'+Math.round(x.t.total/maxCat*100)+'%"></div></div>'+
+        '<span style="font-size:11px;color:var(--text-muted);margin-right:8px">'+x.t.n+' ord</span>'+
+        '<span class="cat-amt">'+money(x.t.total)+'</span></div>';
+    }).join(''):'<div style="color:var(--text-muted);font-size:12px;padding:6px">Sin datos en este período.</div>')+'</div>';
+  document.getElementById('rep-cierre').innerHTML=html;
+
+  // ── 2. IVU POR SUPLIDOR / ORIGEN ──
+  var grupos=agruparIvu(data,origenDe).sort(function(a,b){
+    if(b.estatal!==a.estatal)return b.estatal-a.estatal;
+    return b.total-a.total;
+  });
+  if(!grupos.length){
+    document.getElementById('rep-ivu').innerHTML=vacio('🧮','No hay órdenes en este período.');
+  }else{
+    document.getElementById('rep-ivu').innerHTML='<div class="table-wrap rep-wrap"><table class="rep-table">'+
+      '<thead><tr><th>Suplidor / Origen</th><th>Tipo</th><th>Órdenes</th><th>Subtotal</th><th>IVU Estatal 10.5%</th><th>IVU Municipal 1%</th><th>Total Pagado</th></tr></thead><tbody>'+
+      grupos.map(function(g){
+        return '<tr><td><div style="font-weight:500">'+esc(g.key)+'</div>'+
+          (g.sinDesglose?'<div style="font-size:10px;color:var(--warning);margin-top:2px">'+g.sinDesglose+' sin desglose</div>':'')+'</td>'+
+          '<td>'+(g.tipo==='suplidor'?'<span class="badge badge-ordenado">🧾 Suplidor</span>':'<span class="badge badge-negocio">🛒 Online</span>')+'</td>'+
+          '<td class="price">'+g.n+'</td>'+
+          '<td class="price">'+money(g.subtotal)+'</td>'+
+          '<td class="price" style="color:#90c0f0">'+money(g.estatal)+'</td>'+
+          '<td class="price" style="color:#90c0f0">'+money(g.municipal)+'</td>'+
+          '<td class="price" style="color:var(--gold)">'+money(g.total)+'</td></tr>';
+      }).join('')+
+      '</tbody><tfoot><tr><td>TOTAL</td><td></td><td class="price">'+t.n+'</td>'+
+      '<td class="price">'+money(t.subtotal)+'</td>'+
+      '<td class="price" style="color:#90c0f0">'+money(t.estatal)+'</td>'+
+      '<td class="price" style="color:#90c0f0">'+money(t.municipal)+'</td>'+
+      '<td class="price" style="color:var(--gold)">'+money(t.total)+'</td></tr></tfoot></table></div>';
+  }
+
+  // ── 3. POR CLIENTE ──
+  var deClientes=data.filter(function(c){return c.tipo==='cliente';});
+  if(!deClientes.length){
+    document.getElementById('rep-clientes').innerHTML=vacio('👤','No hay compras para clientes en este período.');
+  }else{
+    var gc=agruparIvu(deClientes,function(c){return (c.cliente||'').trim()||'Cliente sin nombre';});
+    var tc=totalesDe(deClientes);
+    document.getElementById('rep-clientes').innerHTML='<div class="table-wrap rep-wrap"><table class="rep-table">'+
+      '<thead><tr><th>Cliente</th><th>Órdenes</th><th>Subtotal</th><th>IVU</th><th>Total</th></tr></thead><tbody>'+
+      gc.map(function(g){
+        return '<tr><td style="font-weight:500">'+esc(g.key)+'</td>'+
+          '<td class="price">'+g.n+'</td>'+
+          '<td class="price">'+money(g.subtotal)+'</td>'+
+          '<td class="price" style="color:#90c0f0">'+money(g.ivu)+'</td>'+
+          '<td class="price" style="color:var(--gold)">'+money(g.total)+'</td></tr>';
+      }).join('')+
+      '</tbody><tfoot><tr><td>TOTAL</td><td class="price">'+tc.n+'</td><td class="price">'+money(tc.subtotal)+
+      '</td><td class="price" style="color:#90c0f0">'+money(tc.ivu)+'</td><td class="price" style="color:var(--gold)">'+money(tc.total)+'</td></tr></tfoot></table></div>';
+  }
+
+  // ── 4. CUENTAS POR PAGAR (siempre al día de hoy, sin filtro de mes) ──
+  var deuda=compras.filter(function(c){return getTipoCompra(c)==='suplidor'&&estadoPagoEfectivo(c)!=='Pagada';});
+  if(!deuda.length){
+    document.getElementById('rep-pagar').innerHTML=vacio('✅','No hay facturas pendientes. Todo está pagado.');
+  }else{
+    var mapaD={};
+    deuda.forEach(function(c){
+      var k=(c.suplidor||'').trim()||'Suplidor sin nombre';
+      if(!mapaD[k])mapaD[k]={key:k,n:0,pendiente:0,vencido:0,nVencidas:0};
+      var g=mapaD[k],monto=Number(c.costo)||0;
+      g.n++;g.pendiente=r2(g.pendiente+monto);
+      if(estadoPagoEfectivo(c)==='Vencida'){g.vencido=r2(g.vencido+monto);g.nVencidas++;}
+    });
+    var listaD=Object.keys(mapaD).map(function(k){return mapaD[k];}).sort(function(a,b){return b.pendiente-a.pendiente;});
+    var totPend=listaD.reduce(function(s,g){return r2(s+g.pendiente);},0);
+    var totVenc=listaD.reduce(function(s,g){return r2(s+g.vencido);},0);
+    var totN=listaD.reduce(function(s,g){return s+g.n;},0);
+    document.getElementById('rep-pagar').innerHTML='<div class="table-wrap rep-wrap"><table class="rep-table">'+
+      '<thead><tr><th>Suplidor</th><th>Facturas</th><th>Por Pagar</th><th>Vencido</th></tr></thead><tbody>'+
+      listaD.map(function(g){
+        return '<tr'+(g.vencido>0?' class="row-vencida"':'')+'><td style="font-weight:500">'+esc(g.key)+'</td>'+
+          '<td class="price">'+g.n+(g.nVencidas?'<div style="font-size:10px;color:#e08080;margin-top:2px">'+g.nVencidas+' vencida(s)</div>':'')+'</td>'+
+          '<td class="price" style="color:var(--warning)">'+money(g.pendiente)+'</td>'+
+          '<td class="price" style="color:'+(g.vencido>0?'#e08080':'var(--text-muted)')+'">'+(g.vencido>0?money(g.vencido):'—')+'</td></tr>';
+      }).join('')+
+      '</tbody><tfoot><tr><td>TOTAL</td><td class="price">'+totN+'</td>'+
+      '<td class="price" style="color:var(--warning)">'+money(totPend)+'</td>'+
+      '<td class="price" style="color:#e08080">'+money(totVenc)+'</td></tr></tfoot></table></div>';
+  }
+}
+
 // ── MODAL ──
 window.toggleNotaField=function(){
   var newEstado=document.getElementById('edit-estado').value;
@@ -1563,7 +1937,29 @@ window.openModal=function(idx){
   document.getElementById('edit-cantidad').value=c.cantidad||1;
   document.getElementById('edit-razon').value=c.razon||'';
   document.getElementById('edit-cat').value=c.categoria||'';
-  document.getElementById('edit-costo').value=c.costo||'';
+  // ── Costo / IVU ──
+  var esDesg=(typeof c.subtotal==='number'&&isFinite(c.subtotal));
+  var selT=document.getElementById('edit-ivuTasa');
+  var opts='<option value="11.5">11.5% — Estatal + Municipal</option>'+
+           '<option value="10.5">10.5% — Solo estatal</option>'+
+           '<option value="0">Exento — 0%</option>'+
+           '<option value="otro">Otro %…</option>';
+  // Las órdenes viejas arrancan "sin desglose" para no alterarlas solas
+  if(!esDesg)opts='<option value="legacy">Sin desglose — total incluido</option>'+opts;
+  selT.innerHTML=opts;
+  document.getElementById('edit-montoIncluyeIvu').checked=false;
+  document.getElementById('edit-ivuTasaOtro').value='';
+  if(esDesg){
+    var t=Number(c.ivuTasa)||0;
+    var esStd=(t===11.5||t===10.5||t===0);
+    selT.value=esStd?String(t):'otro';
+    if(!esStd)document.getElementById('edit-ivuTasaOtro').value=t;
+    document.getElementById('edit-monto').value=c.subtotal;
+  }else{
+    selT.value='legacy';
+    document.getElementById('edit-monto').value=(typeof c.costo==='number')?c.costo:'';
+  }
+  window.onIvuTasaChangeEdit();
   document.getElementById('edit-suplidor').value=c.suplidor||'';
   document.getElementById('edit-donde').value=c.donde||'';
   document.getElementById('edit-estado').value=c.estado||'Pendiente';
@@ -1708,6 +2104,7 @@ async function boot(){
       showLoading('Cargando...');
       await loadData();
       showView(lastView);
+      window.recalcIvu();
       return;
     }
     // Logged in but no profile selected
@@ -1735,19 +2132,154 @@ window.exportarExcel=function(){
       'Categoría':c.categoria||'',
       'Suplidor':c.suplidor||'',
       'Dónde':c.donde||'',
-      'Costo':c.costo||0,
+      'Subtotal sin IVU':ivuInfo(c).subtotal,
+      'IVU Estatal 10.5%':ivuInfo(c).estatal,
+      'IVU Municipal 1%':ivuInfo(c).municipal,
+      'IVU Total':ivuInfo(c).ivu,
+      'Total':ivuInfo(c).total,
+      'IVU Desglosado':ivuInfo(c).desglosado?'Sí':'No',
       'Tracking':c.tracking||'',
       'Estado':c.estado||''
     };
   });
   var ws=XLSX.utils.json_to_sheet(rows);
-  var colWidths=[{wch:10},{wch:12},{wch:16},{wch:35},{wch:18},{wch:10},{wch:18},{wch:16},{wch:20},{wch:18},{wch:10},{wch:22},{wch:12}];
-  ws['!cols']=colWidths;
+  ws['!cols']=[{wch:10},{wch:12},{wch:16},{wch:35},{wch:9},{wch:18},{wch:10},{wch:18},{wch:20},{wch:20},{wch:18},{wch:14},{wch:16},{wch:16},{wch:11},{wch:11},{wch:14},{wch:22},{wch:12}];
   var wb=XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb,ws,'Órdenes');
   var fecha=new Date().toISOString().split('T')[0];
   XLSX.writeFile(wb,'AgroHorse_Ordenes_'+fecha+'.xlsx');
   showToast('✓ Excel descargado');
+}
+
+// ── EXPORTAR REPORTES (varias hojas, para el contable) ──
+window.exportarReportesExcel=function(){
+  var p=repData(),data=p.data;
+  if(!data.length){showToast('No hay órdenes en este período.');return;}
+  var t=totalesDe(data);
+  var tOnline=totalesDe(data.filter(function(c){return getTipoCompra(c)==='online';}));
+  var tSup=totalesDe(data.filter(function(c){return getTipoCompra(c)==='suplidor';}));
+  var wb=XLSX.utils.book_new();
+
+  // Hoja 1: Cierre
+  var cierre=[
+    ['AGRO HORSE EXPRESS — CIERRE DEL PERÍODO'],
+    ['Período',p.label],
+    ['Generado',new Date().toLocaleString('es')],
+    [],
+    ['Concepto','Monto'],
+    ['Total gastado',t.total],
+    ['Subtotal (sin IVU)',t.subtotal],
+    ['IVU Estatal 10.5%',t.estatal],
+    ['IVU Municipal 1%',t.municipal],
+    ['IVU Total',t.ivu],
+    [],
+    ['Desglose','Órdenes','Subtotal','IVU','Total'],
+    ['Órdenes Online',tOnline.n,tOnline.subtotal,tOnline.ivu,tOnline.total],
+    ['Facturas de Suplidores',tSup.n,tSup.subtotal,tSup.ivu,tSup.total],
+    ['TOTAL',t.n,t.subtotal,t.ivu,t.total],
+    [],
+    ['Órdenes sin desglose de IVU',t.sinDesglose],
+    ['Monto sin desglose',t.montoSinDesglose]
+  ];
+  cierre.push([]);
+  cierre.push(['Por Categoría','Órdenes','Subtotal','IVU','Total']);
+  CATS.concat(['Sin categoría']).forEach(function(cat){
+    var sub=data.filter(function(c){return cat==='Sin categoría'?!c.categoria:c.categoria===cat;});
+    if(!sub.length)return;
+    var tt=totalesDe(sub);
+    cierre.push([cat,tt.n,tt.subtotal,tt.ivu,tt.total]);
+  });
+  var wsC=XLSX.utils.aoa_to_sheet(cierre);
+  wsC['!cols']=[{wch:30},{wch:14},{wch:14},{wch:14},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,wsC,'Cierre');
+
+  // Hoja 2: IVU por origen
+  var grupos=agruparIvu(data,origenDe).sort(function(a,b){return b.estatal-a.estatal||b.total-a.total;});
+  var filasIvu=grupos.map(function(g){
+    return {
+      'Suplidor / Origen':g.key,
+      'Tipo':g.tipo==='suplidor'?'Factura Suplidor':'Orden Online',
+      'Órdenes':g.n,
+      'Subtotal sin IVU':g.subtotal,
+      'IVU Estatal 10.5%':g.estatal,
+      'IVU Municipal 1%':g.municipal,
+      'IVU Total':g.ivu,
+      'Total Pagado':g.total,
+      'Órdenes sin desglose':g.sinDesglose
+    };
+  });
+  filasIvu.push({'Suplidor / Origen':'TOTAL','Tipo':'','Órdenes':t.n,'Subtotal sin IVU':t.subtotal,'IVU Estatal 10.5%':t.estatal,'IVU Municipal 1%':t.municipal,'IVU Total':t.ivu,'Total Pagado':t.total,'Órdenes sin desglose':t.sinDesglose});
+  var wsI=XLSX.utils.json_to_sheet(filasIvu);
+  wsI['!cols']=[{wch:26},{wch:18},{wch:10},{wch:16},{wch:18},{wch:17},{wch:12},{wch:14},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,wsI,'IVU por Origen');
+
+  // Hoja 3: Detalle de todas las órdenes del período (online + facturas)
+  var detalle=data.slice().sort(function(a,b){return (a.fecha||'').localeCompare(b.fecha||'');}).map(function(c){
+    var i=ivuInfo(c);
+    return {
+      'Orden':'ORD-'+String(c.num||'').padStart(4,'0'),
+      'Fecha':c.fecha||'',
+      'Tipo Compra':getTipoCompra(c)==='suplidor'?'Factura Suplidor':'Orden Online',
+      'Suplidor / Origen':origenDe(c),
+      'Invoice':c.invoiceNumber||'',
+      'Descripción':c.descripcion||'',
+      'Cantidad':c.cantidad||1,
+      'Categoría':c.categoria||'',
+      'Para':c.tipo==='cliente'?'Cliente':'Negocio',
+      'Cliente':c.cliente||'',
+      'Subtotal sin IVU':i.subtotal,
+      'Tasa IVU %':i.desglosado?(Number(c.ivuTasa)||0):'',
+      'IVU Estatal 10.5%':i.estatal,
+      'IVU Municipal 1%':i.municipal,
+      'IVU Total':i.ivu,
+      'Total':i.total,
+      'IVU Desglosado':i.desglosado?'Sí':'No',
+      'Estado':c.estado||'',
+      'Estado Pago':estadoPagoEfectivo(c)||'',
+      'Empleado':c.empleado||''
+    };
+  });
+  var wsD=XLSX.utils.json_to_sheet(detalle);
+  wsD['!cols']=[{wch:10},{wch:12},{wch:17},{wch:24},{wch:14},{wch:35},{wch:9},{wch:20},{wch:9},{wch:18},{wch:16},{wch:11},{wch:18},{wch:17},{wch:11},{wch:12},{wch:15},{wch:12},{wch:13},{wch:16}];
+  XLSX.utils.book_append_sheet(wb,wsD,'Detalle Órdenes');
+
+  // Hoja 4: Por cliente
+  var deClientes=data.filter(function(c){return c.tipo==='cliente';});
+  if(deClientes.length){
+    var gc=agruparIvu(deClientes,function(c){return (c.cliente||'').trim()||'Cliente sin nombre';});
+    var tc=totalesDe(deClientes);
+    var filasCli=gc.map(function(g){
+      return {'Cliente':g.key,'Órdenes':g.n,'Subtotal sin IVU':g.subtotal,'IVU':g.ivu,'Total':g.total};
+    });
+    filasCli.push({'Cliente':'TOTAL','Órdenes':tc.n,'Subtotal sin IVU':tc.subtotal,'IVU':tc.ivu,'Total':tc.total});
+    var wsCl=XLSX.utils.json_to_sheet(filasCli);
+    wsCl['!cols']=[{wch:26},{wch:10},{wch:16},{wch:12},{wch:12}];
+    XLSX.utils.book_append_sheet(wb,wsCl,'Por Cliente');
+  }
+
+  // Hoja 5: Cuentas por pagar (al día de hoy)
+  var deuda=compras.filter(function(c){return getTipoCompra(c)==='suplidor'&&estadoPagoEfectivo(c)!=='Pagada';});
+  if(deuda.length){
+    var filasP=deuda.slice().sort(function(a,b){return (a.fechaPago||'9999').localeCompare(b.fechaPago||'9999');}).map(function(c){
+      return {
+        'Suplidor':c.suplidor||'',
+        'Invoice':c.invoiceNumber||'',
+        'Fecha Factura':c.fechaFactura||c.fecha||'',
+        'Vence':c.fechaPago||'',
+        'Descripción':c.descripcion||'',
+        'Monto':Number(c.costo)||0,
+        'Estado':estadoPagoEfectivo(c)
+      };
+    });
+    filasP.push({'Suplidor':'TOTAL','Invoice':'','Fecha Factura':'','Vence':'','Descripción':'','Monto':deuda.reduce(function(s,c){return r2(s+(Number(c.costo)||0));},0),'Estado':''});
+    var wsP=XLSX.utils.json_to_sheet(filasP);
+    wsP['!cols']=[{wch:24},{wch:14},{wch:14},{wch:12},{wch:35},{wch:12},{wch:12}];
+    XLSX.utils.book_append_sheet(wb,wsP,'Por Pagar');
+  }
+
+  var nombre='AgroHorse_Reporte_'+(p.mes||'Todos')+'.xlsx';
+  XLSX.writeFile(wb,nombre);
+  showToast('✓ Reporte descargado');
 }
 
 boot();
