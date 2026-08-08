@@ -740,8 +740,9 @@ let prevEstado = null;
 let currentHistorialTab = 'ordenes';
 // Si el usuario escogió la tasa de IVU a mano, el tipo de compra ya no se la pisa
 let ivuTasaTocada = false;
-// Marca que la orden abierta en Editar venía sin desglose (su monto ya trae el IVU)
+// Marca que la orden abierta en Editar venía sin desglose, y cuánto era su total
 let editLegacyPend = false;
+let editLegacyTotal = 0;
 
 // Helper: días entre dos fechas YYYY-MM-DD (b - a, negativo si b < a)
 function diasEntre(a,b){
@@ -870,11 +871,11 @@ window.onIvuTasaChange=function(){
 window.recalcIvuEdit=function(){
   var sel=document.getElementById('edit-ivuTasa');
   var esLegacy=sel.value==='legacy',esManual=sel.value==='manual';
-  // Al desglosar una orden vieja, el monto que hay en pantalla ES el total pagado
-  // (no el subtotal), así que se saca el IVU hacia atrás en vez de sumarlo encima.
-  // En modo manual no aplica: ahí el subtotal y el IVU se escriben por separado.
+  // Al desglosar una orden vieja el campo trae el TOTAL viejo, no el subtotal.
+  // El monto que se escribe siempre es el subtotal, así que en vez de restarle
+  // el IVU se vacía el campo y se recuerda cuánto era el total.
   if(editLegacyPend&&!esLegacy){
-    document.getElementById('edit-montoIncluyeIvu').checked=!esManual;
+    document.getElementById('edit-monto').value='';
     editLegacyPend=false;
   }
   document.getElementById('edit-incluye-wrap').style.display=(esLegacy||esManual)?'none':'flex';
@@ -885,8 +886,11 @@ window.recalcIvuEdit=function(){
   }
   var res=calcDesdeForm('edit-ivuTasa','edit-ivuTasaOtro','edit-ivuManualMonto','edit-monto','edit-montoIncluyeIvu');
   var incluye=document.getElementById('edit-montoIncluyeIvu').checked;
-  document.getElementById('edit-label-monto').textContent=esManual?'Subtotal del recibo — sin IVU ($)'
+  var lbl=esManual?'Subtotal del recibo — sin IVU ($)'
     :(incluye?'Total — IVU incluido ($)':(res.tasa>0?'Subtotal — sin IVU ($)':'Costo ($) — exento'));
+  // Recordatorio del total viejo mientras se desglosa una orden que no lo tenía
+  if(editLegacyTotal>0)lbl+='  ·  antes era '+money(editLegacyTotal)+' en total';
+  document.getElementById('edit-label-monto').textContent=lbl;
   document.getElementById('edit-ivu-breakdown').innerHTML=ivuBreakdownHTML(res);
 }
 window.onIvuTasaChangeEdit=function(){
@@ -2003,6 +2007,7 @@ window.openModal=function(idx){
   if(!esDesg)opts='<option value="legacy">Sin desglose — total incluido</option>'+opts;
   selT.innerHTML=opts;
   editLegacyPend=!esDesg;   // su monto es el total pagado, no el subtotal
+  editLegacyTotal=esDesg?0:(Number(c.costo)||0);
   document.getElementById('edit-montoIncluyeIvu').checked=false;
   document.getElementById('edit-ivuTasaOtro').value='';
   document.getElementById('edit-ivuManualMonto').value='';
