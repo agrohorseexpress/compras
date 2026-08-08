@@ -798,13 +798,11 @@ function calcIvu(monto,tasa,incluye){
   return {subtotal:sub,estatal:est,municipal:mun,ivu:ivu,total:total,tasa:tasa,manual:false};
 }
 // IVU escrito a mano (facturas mixtas: parte de la compra pagó IVU y parte no).
-// El monto de IVU se reparte estatal/municipal en proporción 10.5 / 1, que es
-// como se cobran juntos en PR sobre la parte que sí paga.
+// Todo el monto va a IVU estatal: los suplidores no cobran IVU municipal.
 function calcIvuManual(monto,ivuMonto){
   var sub=Number(monto);if(!isFinite(sub)||sub<0)sub=0;sub=r2(sub);
   var ivu=Number(ivuMonto);if(!isFinite(ivu)||ivu<0)ivu=0;ivu=r2(ivu);
-  var est=r2(ivu*(IVU_EST_MAX/11.5)),mun=r2(ivu-est);
-  return {subtotal:sub,estatal:est,municipal:mun,ivu:ivu,total:r2(sub+ivu),
+  return {subtotal:sub,estatal:ivu,municipal:0,ivu:ivu,total:r2(sub+ivu),
           tasa:sub>0?r2(ivu/sub*100):0,manual:true};
 }
 // Lee el formulario (nuevo o de editar) y devuelve el desglose que se va a guardar
