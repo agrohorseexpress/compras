@@ -424,11 +424,13 @@ tfoot tr:hover td{background:var(--navy-900);}
                 <option value="10.5">10.5% — Solo estatal</option>
                 <option value="0">Exento — 0%</option>
                 <option value="otro">Otro %…</option>
+                <option value="manual">Escribir el IVU del recibo</option>
               </select>
             </div>
             <div class="form-group" id="grupo-ivu-otro" style="display:none"><label>Porcentaje de IVU (%)</label><input type="number" id="ivuTasaOtro" step="0.01" min="0" max="100" placeholder="Ej: 7" oninput="recalcIvu()"></div>
+            <div class="form-group" id="grupo-ivu-manual" style="display:none"><label>IVU del recibo ($)</label><input type="number" id="ivuManualMonto" step="0.01" min="0" placeholder="0.00" oninput="recalcIvu()"></div>
             <div class="form-group full" style="gap:8px">
-              <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:12px;color:var(--text-muted);cursor:pointer;font-weight:400"><input type="checkbox" id="montoIncluyeIvu" onchange="recalcIvu()" style="width:auto;margin:0;padding:0"> El monto que escribí ya incluye el IVU (el sistema lo separa)</label>
+              <label id="incluye-wrap" style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:12px;color:var(--text-muted);cursor:pointer;font-weight:400"><input type="checkbox" id="montoIncluyeIvu" onchange="recalcIvu()" style="width:auto;margin:0;padding:0"> El monto que escribí ya incluye el IVU (el sistema lo separa)</label>
               <div id="ivu-breakdown" class="ivu-box"></div>
             </div>
             <div class="form-group" id="grupo-fecha"><label>Fecha</label><input type="date" id="fecha"></div>
@@ -654,6 +656,7 @@ tfoot tr:hover td{background:var(--navy-900);}
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div class="form-group"><label>IVU</label><select id="edit-ivuTasa" onchange="onIvuTasaChangeEdit()"></select></div>
         <div class="form-group" id="edit-grupo-ivu-otro" style="display:none"><label>Porcentaje (%)</label><input type="number" id="edit-ivuTasaOtro" step="0.01" min="0" max="100" oninput="recalcIvuEdit()"></div>
+        <div class="form-group" id="edit-grupo-ivu-manual" style="display:none"><label>IVU del recibo ($)</label><input type="number" id="edit-ivuManualMonto" step="0.01" min="0" placeholder="0.00" oninput="recalcIvuEdit()"></div>
       </div>
       <label id="edit-incluye-wrap" style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:12px;color:var(--text-muted);cursor:pointer;font-weight:400"><input type="checkbox" id="edit-montoIncluyeIvu" onchange="recalcIvuEdit()" style="width:auto;margin:0;padding:0"> El monto que escribí ya incluye el IVU</label>
       <div id="edit-ivu-breakdown" class="ivu-box"></div>
@@ -735,6 +738,10 @@ let editIndex = null;
 let editSupId = null;
 let prevEstado = null;
 let currentHistorialTab = 'ordenes';
+// Si el usuario escogió la tasa de IVU a mano, el tipo de compra ya no se la pisa
+let ivuTasaTocada = false;
+// Marca que la orden abierta en Editar venía sin desglose (su monto ya trae el IVU)
+let editLegacyPend = false;
 
 // Helper: días entre dos fechas YYYY-MM-DD (b - a, negativo si b < a)
 function diasEntre(a,b){
@@ -787,7 +794,25 @@ function calcIvu(monto,tasa,incluye){
     ivu=r2(est+mun);
     total=r2(sub+ivu);
   }
-  return {subtotal:sub,estatal:est,municipal:mun,ivu:ivu,total:total,tasa:tasa};
+  return {subtotal:sub,estatal:est,municipal:mun,ivu:ivu,total:total,tasa:tasa,manual:false};
+}
+// IVU escrito a mano (facturas mixtas: parte de la compra pagó IVU y parte no).
+// El monto de IVU se reparte estatal/municipal en proporción 10.5 / 1, que es
+// como se cobran juntos en PR sobre la parte que sí paga.
+function calcIvuManual(monto,ivuMonto){
+  var sub=Number(monto);if(!isFinite(sub)||sub<0)sub=0;sub=r2(sub);
+  var ivu=Number(ivuMonto);if(!isFinite(ivu)||ivu<0)ivu=0;ivu=r2(ivu);
+  var est=r2(ivu*(IVU_EST_MAX/11.5)),mun=r2(ivu-est);
+  return {subtotal:sub,estatal:est,municipal:mun,ivu:ivu,total:r2(sub+ivu),
+          tasa:sub>0?r2(ivu/sub*100):0,manual:true};
+}
+// Lee el formulario (nuevo o de editar) y devuelve el desglose que se va a guardar
+function calcDesdeForm(selId,otroId,manualId,montoId,incluyeId){
+  var monto=document.getElementById(montoId).value;
+  if(document.getElementById(selId).value==='manual'){
+    return calcIvuManual(monto,(document.getElementById(manualId)||{value:0}).value);
+  }
+  return calcIvu(monto,leerTasa(selId,otroId),document.getElementById(incluyeId).checked);
 }
 // Lee cualquier orden (nueva o vieja) y devuelve su desglose para los reportes
 function ivuInfo(c){
@@ -809,42 +834,65 @@ function leerTasa(selId,otroId){
   return parseFloat(el.value)||0;
 }
 function ivuBreakdownHTML(res){
-  var sp=tasaSplit(res.tasa);
-  return '<div class="ivu-cell"><div class="s-label">Subtotal</div><div class="price">'+money(res.subtotal)+'</div></div>'+
-    '<div class="ivu-cell"><div class="s-label">IVU Estatal '+sp.est+'%</div><div class="price" style="color:#90c0f0">'+money(res.estatal)+'</div></div>'+
-    (sp.mun>0?'<div class="ivu-cell"><div class="s-label">IVU Municipal '+sp.mun+'%</div><div class="price" style="color:#90c0f0">'+money(res.municipal)+'</div></div>':'')+
+  var sp=tasaSplit(res.tasa),etiqueta,lblEst,lblMun,verMun;
+  if(res.manual){
+    etiqueta='IVU del recibo'+(res.tasa>0?' — '+r2(res.tasa)+'% efectivo':'');
+    lblEst='IVU Estatal';lblMun='IVU Municipal';verMun=(res.municipal>0);
+  }else{
+    etiqueta=res.tasa>0?('IVU '+r2(res.tasa)+'%'):'EXENTO — 0%';
+    lblEst='IVU Estatal '+sp.est+'%';lblMun='IVU Municipal '+sp.mun+'%';verMun=(sp.mun>0);
+  }
+  return '<div class="ivu-cell"><div class="s-label">Se va a guardar con</div><div style="font-family:\'IBM Plex Mono\',monospace;font-size:15px;font-weight:600;color:var(--gold)">'+etiqueta+'</div></div>'+
+    '<div class="ivu-cell"><div class="s-label">Subtotal</div><div class="price">'+money(res.subtotal)+'</div></div>'+
+    '<div class="ivu-cell"><div class="s-label">'+lblEst+'</div><div class="price" style="color:#90c0f0">'+money(res.estatal)+'</div></div>'+
+    (verMun?'<div class="ivu-cell"><div class="s-label">'+lblMun+'</div><div class="price" style="color:#90c0f0">'+money(res.municipal)+'</div></div>':'')+
     '<div class="ivu-cell" style="margin-left:auto;text-align:right"><div class="s-label">Total a pagar</div><div style="font-family:\'IBM Plex Mono\',monospace;font-size:18px;color:var(--gold)">'+money(res.total)+'</div></div>';
 }
 // Formulario Nueva Orden
 window.recalcIvu=function(){
-  var tasa=leerTasa('ivuTasa','ivuTasaOtro');
+  var esManual=document.getElementById('ivuTasa').value==='manual';
+  // Con IVU a mano no aplica lo de "el monto ya incluye el IVU": van por separado
+  document.getElementById('incluye-wrap').style.display=esManual?'none':'flex';
+  var res=calcDesdeForm('ivuTasa','ivuTasaOtro','ivuManualMonto','monto','montoIncluyeIvu');
   var incluye=document.getElementById('montoIncluyeIvu').checked;
-  var res=calcIvu(document.getElementById('monto').value,tasa,incluye);
-  document.getElementById('label-monto').textContent=incluye?'Total — IVU incluido ($)':(tasa>0?'Subtotal — sin IVU ($)':'Costo ($) — exento');
+  document.getElementById('label-monto').textContent=esManual?'Subtotal del recibo — sin IVU ($)'
+    :(incluye?'Total — IVU incluido ($)':(res.tasa>0?'Subtotal — sin IVU ($)':'Costo ($) — exento'));
   document.getElementById('ivu-breakdown').innerHTML=ivuBreakdownHTML(res);
 }
 window.onIvuTasaChange=function(){
-  document.getElementById('grupo-ivu-otro').style.display=document.getElementById('ivuTasa').value==='otro'?'flex':'none';
+  ivuTasaTocada=true;   // ya la escogiste tú: el tipo de compra no la vuelve a cambiar
+  var v=document.getElementById('ivuTasa').value;
+  document.getElementById('grupo-ivu-otro').style.display=v==='otro'?'flex':'none';
+  document.getElementById('grupo-ivu-manual').style.display=v==='manual'?'flex':'none';
   window.recalcIvu();
 }
 // Modal Editar
 window.recalcIvuEdit=function(){
   var sel=document.getElementById('edit-ivuTasa');
-  var esLegacy=sel.value==='legacy';
-  document.getElementById('edit-incluye-wrap').style.display=esLegacy?'none':'flex';
+  var esLegacy=sel.value==='legacy',esManual=sel.value==='manual';
+  // Al desglosar una orden vieja, el monto que hay en pantalla ES el total pagado
+  // (no el subtotal), así que se saca el IVU hacia atrás en vez de sumarlo encima.
+  // En modo manual no aplica: ahí el subtotal y el IVU se escriben por separado.
+  if(editLegacyPend&&!esLegacy){
+    document.getElementById('edit-montoIncluyeIvu').checked=!esManual;
+    editLegacyPend=false;
+  }
+  document.getElementById('edit-incluye-wrap').style.display=(esLegacy||esManual)?'none':'flex';
   document.getElementById('edit-ivu-breakdown').style.display=esLegacy?'none':'flex';
   if(esLegacy){
     document.getElementById('edit-label-monto').textContent='Costo total ($) — sin desglose';
     return;
   }
-  var tasa=leerTasa('edit-ivuTasa','edit-ivuTasaOtro');
+  var res=calcDesdeForm('edit-ivuTasa','edit-ivuTasaOtro','edit-ivuManualMonto','edit-monto','edit-montoIncluyeIvu');
   var incluye=document.getElementById('edit-montoIncluyeIvu').checked;
-  var res=calcIvu(document.getElementById('edit-monto').value,tasa,incluye);
-  document.getElementById('edit-label-monto').textContent=incluye?'Total — IVU incluido ($)':(tasa>0?'Subtotal — sin IVU ($)':'Costo ($) — exento');
+  document.getElementById('edit-label-monto').textContent=esManual?'Subtotal del recibo — sin IVU ($)'
+    :(incluye?'Total — IVU incluido ($)':(res.tasa>0?'Subtotal — sin IVU ($)':'Costo ($) — exento'));
   document.getElementById('edit-ivu-breakdown').innerHTML=ivuBreakdownHTML(res);
 }
 window.onIvuTasaChangeEdit=function(){
-  document.getElementById('edit-grupo-ivu-otro').style.display=document.getElementById('edit-ivuTasa').value==='otro'?'flex':'none';
+  var v=document.getElementById('edit-ivuTasa').value;
+  document.getElementById('edit-grupo-ivu-otro').style.display=v==='otro'?'flex':'none';
+  document.getElementById('edit-grupo-ivu-manual').style.display=v==='manual'?'flex':'none';
   window.recalcIvuEdit();
 }
 
@@ -1071,11 +1119,7 @@ window.guardarCompra=async function(){
       ? document.getElementById('suplidor-dropdown').value
       : '';
     if(tipoCompra==='suplidor' && !suplidorNombre){alert('Selecciona un suplidor.');btn.disabled=false;btn.textContent='Registrar Orden de Compra';hideLoading();return;}
-    const ivuRes=calcIvu(
-      document.getElementById('monto').value,
-      leerTasa('ivuTasa','ivuTasaOtro'),
-      document.getElementById('montoIncluyeIvu').checked
-    );
+    const ivuRes=calcDesdeForm('ivuTasa','ivuTasaOtro','ivuManualMonto','monto','montoIncluyeIvu');
     const orden={
       num:compras.length+1,
       tipoCompra:tipoCompra,
@@ -1095,6 +1139,7 @@ window.guardarCompra=async function(){
       ivuEstatal:ivuRes.estatal,
       ivuMunicipal:ivuRes.municipal,
       ivu:ivuRes.ivu,
+      ivuManual:ivuRes.manual,
       costo:ivuRes.total,
       tracking:document.getElementById('tracking').value.trim(),
       estado:document.getElementById('estado').value,
@@ -1149,13 +1194,14 @@ window.guardarEdicion=async function(){
     if(document.getElementById('edit-ivuTasa').value==='legacy'){
       updatePayload.costo=r2(eMonto);
     }else{
-      var eRes=calcIvu(eMonto,leerTasa('edit-ivuTasa','edit-ivuTasaOtro'),document.getElementById('edit-montoIncluyeIvu').checked);
+      var eRes=calcDesdeForm('edit-ivuTasa','edit-ivuTasaOtro','edit-ivuManualMonto','edit-monto','edit-montoIncluyeIvu');
       updatePayload.costo=eRes.total;
       updatePayload.subtotal=eRes.subtotal;
       updatePayload.ivuTasa=eRes.tasa;
       updatePayload.ivuEstatal=eRes.estatal;
       updatePayload.ivuMunicipal=eRes.municipal;
       updatePayload.ivu=eRes.ivu;
+      updatePayload.ivuManual=eRes.manual;
     }
     if(getTipoCompra(c)==='suplidor'){
       updatePayload.invoiceNumber=document.getElementById('edit-invoiceNumber').value.trim();
@@ -1246,6 +1292,13 @@ function resetForm(){
   document.getElementById('monto').value='';document.getElementById('donde').value='';
   document.getElementById('ivuTasaOtro').value='';
   document.getElementById('montoIncluyeIvu').checked=false;
+  // Orden nueva: la tasa vuelve al default hasta que la vuelvas a escoger a mano
+  ivuTasaTocada=false;
+  document.getElementById('ivuTasa').value='11.5';
+  document.getElementById('ivuManualMonto').value='';
+  document.getElementById('grupo-ivu-otro').style.display='none';
+  document.getElementById('grupo-ivu-manual').style.display='none';
+  document.getElementById('incluye-wrap').style.display='flex';
   document.getElementById('categoria').value='';document.getElementById('estado').value='Pendiente';
   var epEl=document.getElementById('estadoPago');if(epEl)epEl.value='Pendiente';
   var sdd=document.getElementById('suplidor-dropdown');if(sdd)sdd.value='';
@@ -1700,13 +1753,14 @@ window.selectTipoCompra=function(tipo,btn){
   document.getElementById('grupo-estado-pago').style.display=isSup?'flex':'none';
   document.getElementById('grupo-tracking').style.display=isSup?'none':'flex';
   document.getElementById('grupo-partnumber').style.display=isSup?'none':'flex';
-  // IVU por defecto: facturas de suplidor van exentas, órdenes online pagan 11.5%
+  // IVU por defecto: facturas de suplidor van exentas, órdenes online pagan 11.5%.
+  // Si ya escogiste la tasa a mano, se respeta y no se toca.
   var tasaSel=document.getElementById('ivuTasa');
-  if(tasaSel){
+  if(tasaSel&&!ivuTasaTocada){
     tasaSel.value=isSup?'0':'11.5';
     document.getElementById('grupo-ivu-otro').style.display='none';
-    window.recalcIvu();
   }
+  if(tasaSel)window.recalcIvu();
   if(isSup){
     if(!document.getElementById('fechaFactura').value)document.getElementById('fechaFactura').value=hoyISO();
     refreshSuplidorDropdown();
@@ -1943,13 +1997,21 @@ window.openModal=function(idx){
   var opts='<option value="11.5">11.5% — Estatal + Municipal</option>'+
            '<option value="10.5">10.5% — Solo estatal</option>'+
            '<option value="0">Exento — 0%</option>'+
-           '<option value="otro">Otro %…</option>';
+           '<option value="otro">Otro %…</option>'+
+           '<option value="manual">Escribir el IVU del recibo</option>';
   // Las órdenes viejas arrancan "sin desglose" para no alterarlas solas
   if(!esDesg)opts='<option value="legacy">Sin desglose — total incluido</option>'+opts;
   selT.innerHTML=opts;
+  editLegacyPend=!esDesg;   // su monto es el total pagado, no el subtotal
   document.getElementById('edit-montoIncluyeIvu').checked=false;
   document.getElementById('edit-ivuTasaOtro').value='';
-  if(esDesg){
+  document.getElementById('edit-ivuManualMonto').value='';
+  if(esDesg&&c.ivuManual){
+    // Se registró con el IVU del recibo escrito a mano: se reabre igual
+    selT.value='manual';
+    document.getElementById('edit-ivuManualMonto').value=r2(c.ivu);
+    document.getElementById('edit-monto').value=c.subtotal;
+  }else if(esDesg){
     var t=Number(c.ivuTasa)||0;
     var esStd=(t===11.5||t===10.5||t===0);
     selT.value=esStd?String(t):'otro';
